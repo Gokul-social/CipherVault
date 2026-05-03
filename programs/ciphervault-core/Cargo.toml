@@ -1,0 +1,25 @@
+[package]
+name = "ciphervault-core"
+version = "0.1.0"
+description = "CipherVault core protocol — encrypted order book and trade settlement on Solana"
+edition = "2021"
+
+[lib]
+crate-type = ["cdylib", "lib"]
+name = "ciphervault_core"
+
+[features]
+default = []
+cpi = ["no-entrypoint"]
+no-entrypoint = []
+no-idl = []
+no-log-ix-name = []
+idl-build = ["anchor-lang/idl-build"]
+fhe-integration = []
+
+[dependencies]
+anchor-lang = { version = "0.30.1", features = ["init-if-needed"] }
+anchor-spl = "0.30.1"
+# encrypt-anchor = { version = "0.1.0", optional = true }
+# Uncomment when encrypt-anchor crate is published to crates.io.
+# Activate via: cargo build --features fhe-integration

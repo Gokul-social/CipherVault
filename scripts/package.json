@@ -1,0 +1,21 @@
+{
+  "name": "@ciphervault/scripts",
+  "version": "0.1.0",
+  "private": true,
+  "description": "CipherVault devnet deployment and setup scripts",
+  "scripts": {
+    "setup": "npx ts-node setup-devnet.ts",
+    "deploy": "anchor deploy --provider.cluster devnet"
+  },
+  "dependencies": {
+    "@coral-xyz/anchor": "^0.30.1",
+    "@solana/web3.js": "^1.95.0",
+    "@ciphervault/sdk": "*",
+    "bs58": "^6.0.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.14.0",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.5.0"
+  }
+}

@@ -1,0 +1,37 @@
+{
+  "name": "ciphervault",
+  "version": "0.1.0",
+  "private": true,
+  "description": "CipherVault — Confidential institutional prime brokerage on Solana using Ika dWallets and Encrypt FHE",
+  "workspaces": [
+    "sdk",
+    "app",
+    "scripts"
+  ],
+  "scripts": {
+    "build:sdk": "npm run build --workspace=sdk",
+    "build:app": "npm run build --workspace=app",
+    "dev": "npm run dev --workspace=app",
+    "test:anchor": "anchor test",
+    "test:sdk": "npm run test --workspace=sdk",
+    "setup:devnet": "npx ts-node scripts/setup-devnet.ts",
+    "lint": "eslint . --ext .ts,.tsx",
+    "clean": "rm -rf node_modules sdk/dist app/.next"
+  },
+  "devDependencies": {
+    "@coral-xyz/anchor": "^0.30.1",
+    "@solana/web3.js": "^1.95.0",
+    "@types/bn.js": "^5.1.5",
+    "@types/chai": "^4.3.16",
+    "@types/mocha": "^10.0.7",
+    "@types/node": "^20.14.0",
+    "chai": "^4.4.1",
+    "mocha": "^10.7.0",
+    "ts-mocha": "^10.0.0",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.5.0"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}

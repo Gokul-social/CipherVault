@@ -1,0 +1,507 @@
+    Checking ciphervault-core v0.1.0 (/Users/gokulsmac/Desktop/encrypt/programs/ciphervault-core)
+    Checking collateral-vault v0.1.0 (/Users/gokulsmac/Desktop/encrypt/programs/collateral-vault)
+error: failed to decode base58 string
+ --> programs/ciphervault-core/src/lib.rs:3:13
+  |
+3 | declare_id!("CVau1tC0rePr0gramXXXXXXXXXXXXXXXXXXXXXXXXX");
+  |             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+error: failed to decode base58 string
+ --> programs/collateral-vault/src/lib.rs:3:13
+  |
+3 | declare_id!("CVau1tC011atera1XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX");
+  |             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+error: init_if_needed requires that anchor-lang be imported with the init-if-needed cargo feature enabled. Carefully read the init_if_needed docs before using this feature to make sure you know how to protect yourself against re-initialization attacks.
+   --> programs/ciphervault-core/src/lib.rs:270:9
+    |
+270 |         init_if_needed,
+    |         ^^^^^^^^^^^^^^
+
+error[E0425]: cannot find value `ID` in this scope
+  --> programs/collateral-vault/src/lib.rs:13:1
+   |
+13 | #[program]
+   | ^^^^^^^^^^ not found in this scope
+   |
+   = note: this error originates in the attribute macro `program` (in Nightly builds, run with -Z macro-backtrace for more info)
+
+error[E0425]: cannot find value `ID` in the crate root
+  --> programs/collateral-vault/src/lib.rs:13:1
+   |
+13 | #[program]
+   | ^^^^^^^^^^ not found in the crate root
+   |
+   = note: this error originates in the attribute macro `program` (in Nightly builds, run with -Z macro-backtrace for more info)
+
+warning: unexpected `cfg` condition value: `custom-heap`
+  --> programs/collateral-vault/src/lib.rs:13:1
+   |
+13 | #[program]
+   | ^^^^^^^^^^
+   |
+   = note: expected values for `feature` are: `cpi`, `default`, `fhe-integration`, `idl-build`, `no-entrypoint`, `no-idl`, and `no-log-ix-name`
+   = note: using a cfg inside a macro will use the cfgs from the destination crate and not the ones from the defining crate
+   = help: try referring to `$crate::custom_heap_default` crate for guidance on how handle this unexpected cfg
+   = help: the macro `$crate::custom_heap_default` may come from an old version of the `solana_program` crate, try updating your dependency with `cargo update -p solana_program`
+   = note: see <https://doc.rust-lang.org/nightly/rustc/check-cfg/cargo-specifics.html> for more information about checking conditional configuration
+   = note: `#[warn(unexpected_cfgs)]` on by default
+   = note: this warning originates in the macro `$crate::custom_heap_default` which comes from the expansion of the attribute macro `program` (in Nightly builds, run with -Z macro-backtrace for more info)
+
+warning: unexpected `cfg` condition value: `solana`
+  --> programs/collateral-vault/src/lib.rs:13:1
+   |
+13 | #[program]
+   | ^^^^^^^^^^
+   |
+   = note: expected values for `target_os` are: `aix`, `amdhsa`, `android`, `cuda`, `cygwin`, `dragonfly`, `emscripten`, `espidf`, `freebsd`, `fuchsia`, `haiku`, `helenos`, `hermit`, `horizon`, `hurd`, `illumos`, `ios`, `l4re`, `linux`, `lynxos178`, `macos`, `managarm`, `motor`, `netbsd`, `none`, `nto`, `nuttx`, `openbsd`, `psp`, `psx`, `qurt`, `redox`, `rtems`, `solaris`, and `solid_asp3` and 14 more
+   = note: using a cfg inside a macro will use the cfgs from the destination crate and not the ones from the defining crate
+   = help: try referring to `$crate::custom_heap_default` crate for guidance on how handle this unexpected cfg
+   = help: the macro `$crate::custom_heap_default` may come from an old version of the `solana_program` crate, try updating your dependency with `cargo update -p solana_program`
+   = note: see <https://doc.rust-lang.org/nightly/rustc/check-cfg/cargo-specifics.html> for more information about checking conditional configuration
+   = note: this warning originates in the macro `$crate::custom_heap_default` which comes from the expansion of the attribute macro `program` (in Nightly builds, run with -Z macro-backtrace for more info)
+
+warning: unexpected `cfg` condition value: `custom-panic`
+  --> programs/collateral-vault/src/lib.rs:13:1
+   |
+13 | #[program]
+   | ^^^^^^^^^^
+   |
+   = note: expected values for `feature` are: `cpi`, `default`, `fhe-integration`, `idl-build`, `no-entrypoint`, `no-idl`, and `no-log-ix-name`
+   = note: using a cfg inside a macro will use the cfgs from the destination crate and not the ones from the defining crate
+   = help: try referring to `$crate::custom_panic_default` crate for guidance on how handle this unexpected cfg
+   = help: the macro `$crate::custom_panic_default` may come from an old version of the `solana_program` crate, try updating your dependency with `cargo update -p solana_program`
+   = note: see <https://doc.rust-lang.org/nightly/rustc/check-cfg/cargo-specifics.html> for more information about checking conditional configuration
+   = note: this warning originates in the macro `$crate::custom_panic_default` which comes from the expansion of the attribute macro `program` (in Nightly builds, run with -Z macro-backtrace for more info)
+
+warning: unexpected `cfg` condition value: `solana`
+  --> programs/collateral-vault/src/lib.rs:13:1
+   |
+13 | #[program]
+   | ^^^^^^^^^^
+   |
+   = note: expected values for `target_os` are: `aix`, `amdhsa`, `android`, `cuda`, `cygwin`, `dragonfly`, `emscripten`, `espidf`, `freebsd`, `fuchsia`, `haiku`, `helenos`, `hermit`, `horizon`, `hurd`, `illumos`, `ios`, `l4re`, `linux`, `lynxos178`, `macos`, `managarm`, `motor`, `netbsd`, `none`, `nto`, `nuttx`, `openbsd`, `psp`, `psx`, `qurt`, `redox`, `rtems`, `solaris`, and `solid_asp3` and 14 more
+   = note: using a cfg inside a macro will use the cfgs from the destination crate and not the ones from the defining crate
+   = help: try referring to `$crate::custom_panic_default` crate for guidance on how handle this unexpected cfg
+   = help: the macro `$crate::custom_panic_default` may come from an old version of the `solana_program` crate, try updating your dependency with `cargo update -p solana_program`
+   = note: see <https://doc.rust-lang.org/nightly/rustc/check-cfg/cargo-specifics.html> for more information about checking conditional configuration
+   = note: this warning originates in the macro `$crate::custom_panic_default` which comes from the expansion of the attribute macro `program` (in Nightly builds, run with -Z macro-backtrace for more info)
+
+warning: unexpected `cfg` condition value: `anchor-debug`
+  --> programs/collateral-vault/src/lib.rs:13:1
+   |
+13 | #[program]
+   | ^^^^^^^^^^
+   |
+   = note: expected values for `feature` are: `cpi`, `default`, `fhe-integration`, `idl-build`, `no-entrypoint`, `no-idl`, and `no-log-ix-name`
+   = note: using a cfg inside a attribute macro will use the cfgs from the destination crate and not the ones from the defining crate
+   = help: try referring to `program` crate for guidance on how handle this unexpected cfg
+   = help: the attribute macro `program` may come from an old version of the `anchor_attribute_program` crate, try updating your dependency with `cargo update -p anchor_attribute_program`
+   = note: see <https://doc.rust-lang.org/nightly/rustc/check-cfg/cargo-specifics.html> for more information about checking conditional configuration
+   = note: this warning originates in the attribute macro `program` (in Nightly builds, run with -Z macro-backtrace for more info)
+
+warning: unexpected `cfg` condition value: `anchor-debug`
+  --> programs/collateral-vault/src/lib.rs:13:1
+   |
+13 | #[program]
+   | ^^^^^^^^^^
+   |
+   = note: expected values for `feature` are: `cpi`, `default`, `fhe-integration`, `idl-build`, `no-entrypoint`, `no-idl`, and `no-log-ix-name`
+   = note: using a cfg inside a derive macro will use the cfgs from the destination crate and not the ones from the defining crate
+   = help: try referring to `Accounts` crate for guidance on how handle this unexpected cfg
+   = help: the derive macro `Accounts` may come from an old version of the `anchor_derive_accounts` crate, try updating your dependency with `cargo update -p anchor_derive_accounts`
+   = note: see <https://doc.rust-lang.org/nightly/rustc/check-cfg/cargo-specifics.html> for more information about checking conditional configuration
+   = note: this warning originates in the derive macro `Accounts` (in Nightly builds, run with -Z macro-backtrace for more info)
+
+warning: unexpected `cfg` condition value: `anchor-debug`
+   --> programs/collateral-vault/src/lib.rs:248:10
+    |
+248 | #[derive(Accounts)]
+    |          ^^^^^^^^
+    |
+    = note: expected values for `feature` are: `cpi`, `default`, `fhe-integration`, `idl-build`, `no-entrypoint`, `no-idl`, and `no-log-ix-name`
+    = note: using a cfg inside a derive macro will use the cfgs from the destination crate and not the ones from the defining crate
+    = help: try referring to `Accounts` crate for guidance on how handle this unexpected cfg
+    = help: the derive macro `Accounts` may come from an old version of the `anchor_derive_accounts` crate, try updating your dependency with `cargo update -p anchor_derive_accounts`
+    = note: see <https://doc.rust-lang.org/nightly/rustc/check-cfg/cargo-specifics.html> for more information about checking conditional configuration
+    = note: this warning originates in the derive macro `Accounts` (in Nightly builds, run with -Z macro-backtrace for more info)
+
+warning: unexpected `cfg` condition value: `anchor-debug`
+   --> programs/collateral-vault/src/lib.rs:265:10
+    |
+265 | #[derive(Accounts)]
+    |          ^^^^^^^^
+    |
+    = note: expected values for `feature` are: `cpi`, `default`, `fhe-integration`, `idl-build`, `no-entrypoint`, `no-idl`, and `no-log-ix-name`
+    = note: using a cfg inside a derive macro will use the cfgs from the destination crate and not the ones from the defining crate
+    = help: try referring to `Accounts` crate for guidance on how handle this unexpected cfg
+    = help: the derive macro `Accounts` may come from an old version of the `anchor_derive_accounts` crate, try updating your dependency with `cargo update -p anchor_derive_accounts`
+    = note: see <https://doc.rust-lang.org/nightly/rustc/check-cfg/cargo-specifics.html> for more information about checking conditional configuration
+    = note: this warning originates in the derive macro `Accounts` (in Nightly builds, run with -Z macro-backtrace for more info)
+
+warning: unexpected `cfg` condition value: `anchor-debug`
+   --> programs/collateral-vault/src/lib.rs:286:10
+    |
+286 | #[derive(Accounts)]
+    |          ^^^^^^^^
+    |
+    = note: expected values for `feature` are: `cpi`, `default`, `fhe-integration`, `idl-build`, `no-entrypoint`, `no-idl`, and `no-log-ix-name`
+    = note: using a cfg inside a derive macro will use the cfgs from the destination crate and not the ones from the defining crate
+    = help: try referring to `Accounts` crate for guidance on how handle this unexpected cfg
+    = help: the derive macro `Accounts` may come from an old version of the `anchor_derive_accounts` crate, try updating your dependency with `cargo update -p anchor_derive_accounts`
+    = note: see <https://doc.rust-lang.org/nightly/rustc/check-cfg/cargo-specifics.html> for more information about checking conditional configuration
+    = note: this warning originates in the derive macro `Accounts` (in Nightly builds, run with -Z macro-backtrace for more info)
+
+warning: unexpected `cfg` condition value: `anchor-debug`
+   --> programs/collateral-vault/src/lib.rs:306:10
+    |
+306 | #[derive(Accounts)]
+    |          ^^^^^^^^
+    |
+    = note: expected values for `feature` are: `cpi`, `default`, `fhe-integration`, `idl-build`, `no-entrypoint`, `no-idl`, and `no-log-ix-name`
+    = note: using a cfg inside a derive macro will use the cfgs from the destination crate and not the ones from the defining crate
+    = help: try referring to `Accounts` crate for guidance on how handle this unexpected cfg
+    = help: the derive macro `Accounts` may come from an old version of the `anchor_derive_accounts` crate, try updating your dependency with `cargo update -p anchor_derive_accounts`
+    = note: see <https://doc.rust-lang.org/nightly/rustc/check-cfg/cargo-specifics.html> for more information about checking conditional configuration
+    = note: this warning originates in the derive macro `Accounts` (in Nightly builds, run with -Z macro-backtrace for more info)
+
+warning: unexpected `cfg` condition value: `anchor-debug`
+   --> programs/collateral-vault/src/lib.rs:331:10
+    |
+331 | #[derive(Accounts)]
+    |          ^^^^^^^^
+    |
+    = note: expected values for `feature` are: `cpi`, `default`, `fhe-integration`, `idl-build`, `no-entrypoint`, `no-idl`, and `no-log-ix-name`
+    = note: using a cfg inside a derive macro will use the cfgs from the destination crate and not the ones from the defining crate
+    = help: try referring to `Accounts` crate for guidance on how handle this unexpected cfg
+    = help: the derive macro `Accounts` may come from an old version of the `anchor_derive_accounts` crate, try updating your dependency with `cargo update -p anchor_derive_accounts`
+    = note: see <https://doc.rust-lang.org/nightly/rustc/check-cfg/cargo-specifics.html> for more information about checking conditional configuration
+    = note: this warning originates in the derive macro `Accounts` (in Nightly builds, run with -Z macro-backtrace for more info)
+
+error[E0425]: cannot find value `ID` in this scope
+  --> programs/ciphervault-core/src/lib.rs:12:1
+   |
+12 | #[program]
+   | ^^^^^^^^^^ not found in this scope
+   |
+   = note: this error originates in the attribute macro `program` (in Nightly builds, run with -Z macro-backtrace for more info)
+
+error[E0425]: cannot find value `ID` in the crate root
+  --> programs/ciphervault-core/src/lib.rs:12:1
+   |
+12 | #[program]
+   | ^^^^^^^^^^ not found in the crate root
+   |
+   = note: this error originates in the attribute macro `program` (in Nightly builds, run with -Z macro-backtrace for more info)
+
+warning: unexpected `cfg` condition value: `custom-heap`
+  --> programs/ciphervault-core/src/lib.rs:12:1
+   |
+12 | #[program]
+   | ^^^^^^^^^^
+   |
+   = note: expected values for `feature` are: `cpi`, `default`, `fhe-integration`, `idl-build`, `no-entrypoint`, `no-idl`, and `no-log-ix-name`
+   = note: using a cfg inside a macro will use the cfgs from the destination crate and not the ones from the defining crate
+   = help: try referring to `$crate::custom_heap_default` crate for guidance on how handle this unexpected cfg
+   = help: the macro `$crate::custom_heap_default` may come from an old version of the `solana_program` crate, try updating your dependency with `cargo update -p solana_program`
+   = note: see <https://doc.rust-lang.org/nightly/rustc/check-cfg/cargo-specifics.html> for more information about checking conditional configuration
+   = note: `#[warn(unexpected_cfgs)]` on by default
+   = note: this warning originates in the macro `$crate::custom_heap_default` which comes from the expansion of the attribute macro `program` (in Nightly builds, run with -Z macro-backtrace for more info)
+
+warning: unexpected `cfg` condition value: `solana`
+  --> programs/ciphervault-core/src/lib.rs:12:1
+   |
+12 | #[program]
+   | ^^^^^^^^^^
+   |
+   = note: expected values for `target_os` are: `aix`, `amdhsa`, `android`, `cuda`, `cygwin`, `dragonfly`, `emscripten`, `espidf`, `freebsd`, `fuchsia`, `haiku`, `helenos`, `hermit`, `horizon`, `hurd`, `illumos`, `ios`, `l4re`, `linux`, `lynxos178`, `macos`, `managarm`, `motor`, `netbsd`, `none`, `nto`, `nuttx`, `openbsd`, `psp`, `psx`, `qurt`, `redox`, `rtems`, `solaris`, and `solid_asp3` and 14 more
+   = note: using a cfg inside a macro will use the cfgs from the destination crate and not the ones from the defining crate
+   = help: try referring to `$crate::custom_heap_default` crate for guidance on how handle this unexpected cfg
+   = help: the macro `$crate::custom_heap_default` may come from an old version of the `solana_program` crate, try updating your dependency with `cargo update -p solana_program`
+   = note: see <https://doc.rust-lang.org/nightly/rustc/check-cfg/cargo-specifics.html> for more information about checking conditional configuration
+   = note: this warning originates in the macro `$crate::custom_heap_default` which comes from the expansion of the attribute macro `program` (in Nightly builds, run with -Z macro-backtrace for more info)
+
+warning: unexpected `cfg` condition value: `custom-panic`
+  --> programs/ciphervault-core/src/lib.rs:12:1
+   |
+12 | #[program]
+   | ^^^^^^^^^^
+   |
+   = note: expected values for `feature` are: `cpi`, `default`, `fhe-integration`, `idl-build`, `no-entrypoint`, `no-idl`, and `no-log-ix-name`
+   = note: using a cfg inside a macro will use the cfgs from the destination crate and not the ones from the defining crate
+   = help: try referring to `$crate::custom_panic_default` crate for guidance on how handle this unexpected cfg
+   = help: the macro `$crate::custom_panic_default` may come from an old version of the `solana_program` crate, try updating your dependency with `cargo update -p solana_program`
+   = note: see <https://doc.rust-lang.org/nightly/rustc/check-cfg/cargo-specifics.html> for more information about checking conditional configuration
+   = note: this warning originates in the macro `$crate::custom_panic_default` which comes from the expansion of the attribute macro `program` (in Nightly builds, run with -Z macro-backtrace for more info)
+
+warning: unexpected `cfg` condition value: `solana`
+  --> programs/ciphervault-core/src/lib.rs:12:1
+   |
+12 | #[program]
+   | ^^^^^^^^^^
+   |
+   = note: expected values for `target_os` are: `aix`, `amdhsa`, `android`, `cuda`, `cygwin`, `dragonfly`, `emscripten`, `espidf`, `freebsd`, `fuchsia`, `haiku`, `helenos`, `hermit`, `horizon`, `hurd`, `illumos`, `ios`, `l4re`, `linux`, `lynxos178`, `macos`, `managarm`, `motor`, `netbsd`, `none`, `nto`, `nuttx`, `openbsd`, `psp`, `psx`, `qurt`, `redox`, `rtems`, `solaris`, and `solid_asp3` and 14 more
+   = note: using a cfg inside a macro will use the cfgs from the destination crate and not the ones from the defining crate
+   = help: try referring to `$crate::custom_panic_default` crate for guidance on how handle this unexpected cfg
+   = help: the macro `$crate::custom_panic_default` may come from an old version of the `solana_program` crate, try updating your dependency with `cargo update -p solana_program`
+   = note: see <https://doc.rust-lang.org/nightly/rustc/check-cfg/cargo-specifics.html> for more information about checking conditional configuration
+   = note: this warning originates in the macro `$crate::custom_panic_default` which comes from the expansion of the attribute macro `program` (in Nightly builds, run with -Z macro-backtrace for more info)
+
+warning: unexpected `cfg` condition value: `anchor-debug`
+  --> programs/ciphervault-core/src/lib.rs:12:1
+   |
+12 | #[program]
+   | ^^^^^^^^^^
+   |
+   = note: expected values for `feature` are: `cpi`, `default`, `fhe-integration`, `idl-build`, `no-entrypoint`, `no-idl`, and `no-log-ix-name`
+   = note: using a cfg inside a attribute macro will use the cfgs from the destination crate and not the ones from the defining crate
+   = help: try referring to `program` crate for guidance on how handle this unexpected cfg
+   = help: the attribute macro `program` may come from an old version of the `anchor_attribute_program` crate, try updating your dependency with `cargo update -p anchor_attribute_program`
+   = note: see <https://doc.rust-lang.org/nightly/rustc/check-cfg/cargo-specifics.html> for more information about checking conditional configuration
+   = note: this warning originates in the attribute macro `program` (in Nightly builds, run with -Z macro-backtrace for more info)
+
+warning: unexpected `cfg` condition value: `anchor-debug`
+  --> programs/ciphervault-core/src/lib.rs:12:1
+   |
+12 | #[program]
+   | ^^^^^^^^^^
+   |
+   = note: expected values for `feature` are: `cpi`, `default`, `fhe-integration`, `idl-build`, `no-entrypoint`, `no-idl`, and `no-log-ix-name`
+   = note: using a cfg inside a derive macro will use the cfgs from the destination crate and not the ones from the defining crate
+   = help: try referring to `Accounts` crate for guidance on how handle this unexpected cfg
+   = help: the derive macro `Accounts` may come from an old version of the `anchor_derive_accounts` crate, try updating your dependency with `cargo update -p anchor_derive_accounts`
+   = note: see <https://doc.rust-lang.org/nightly/rustc/check-cfg/cargo-specifics.html> for more information about checking conditional configuration
+   = note: this warning originates in the derive macro `Accounts` (in Nightly builds, run with -Z macro-backtrace for more info)
+
+warning: unexpected `cfg` condition value: `anchor-debug`
+   --> programs/ciphervault-core/src/lib.rs:242:10
+    |
+242 | #[derive(Accounts)]
+    |          ^^^^^^^^
+    |
+    = note: expected values for `feature` are: `cpi`, `default`, `fhe-integration`, `idl-build`, `no-entrypoint`, `no-idl`, and `no-log-ix-name`
+    = note: using a cfg inside a derive macro will use the cfgs from the destination crate and not the ones from the defining crate
+    = help: try referring to `Accounts` crate for guidance on how handle this unexpected cfg
+    = help: the derive macro `Accounts` may come from an old version of the `anchor_derive_accounts` crate, try updating your dependency with `cargo update -p anchor_derive_accounts`
+    = note: see <https://doc.rust-lang.org/nightly/rustc/check-cfg/cargo-specifics.html> for more information about checking conditional configuration
+    = note: this warning originates in the derive macro `Accounts` (in Nightly builds, run with -Z macro-backtrace for more info)
+
+warning: unexpected `cfg` condition value: `anchor-debug`
+   --> programs/ciphervault-core/src/lib.rs:284:10
+    |
+284 | #[derive(Accounts)]
+    |          ^^^^^^^^
+    |
+    = note: expected values for `feature` are: `cpi`, `default`, `fhe-integration`, `idl-build`, `no-entrypoint`, `no-idl`, and `no-log-ix-name`
+    = note: using a cfg inside a derive macro will use the cfgs from the destination crate and not the ones from the defining crate
+    = help: try referring to `Accounts` crate for guidance on how handle this unexpected cfg
+    = help: the derive macro `Accounts` may come from an old version of the `anchor_derive_accounts` crate, try updating your dependency with `cargo update -p anchor_derive_accounts`
+    = note: see <https://doc.rust-lang.org/nightly/rustc/check-cfg/cargo-specifics.html> for more information about checking conditional configuration
+    = note: this warning originates in the derive macro `Accounts` (in Nightly builds, run with -Z macro-backtrace for more info)
+
+warning: unexpected `cfg` condition value: `anchor-debug`
+   --> programs/ciphervault-core/src/lib.rs:304:10
+    |
+304 | #[derive(Accounts)]
+    |          ^^^^^^^^
+    |
+    = note: expected values for `feature` are: `cpi`, `default`, `fhe-integration`, `idl-build`, `no-entrypoint`, `no-idl`, and `no-log-ix-name`
+    = note: using a cfg inside a derive macro will use the cfgs from the destination crate and not the ones from the defining crate
+    = help: try referring to `Accounts` crate for guidance on how handle this unexpected cfg
+    = help: the derive macro `Accounts` may come from an old version of the `anchor_derive_accounts` crate, try updating your dependency with `cargo update -p anchor_derive_accounts`
+    = note: see <https://doc.rust-lang.org/nightly/rustc/check-cfg/cargo-specifics.html> for more information about checking conditional configuration
+    = note: this warning originates in the derive macro `Accounts` (in Nightly builds, run with -Z macro-backtrace for more info)
+
+warning: unexpected `cfg` condition value: `anchor-debug`
+   --> programs/ciphervault-core/src/lib.rs:329:10
+    |
+329 | #[derive(Accounts)]
+    |          ^^^^^^^^
+    |
+    = note: expected values for `feature` are: `cpi`, `default`, `fhe-integration`, `idl-build`, `no-entrypoint`, `no-idl`, and `no-log-ix-name`
+    = note: using a cfg inside a derive macro will use the cfgs from the destination crate and not the ones from the defining crate
+    = help: try referring to `Accounts` crate for guidance on how handle this unexpected cfg
+    = help: the derive macro `Accounts` may come from an old version of the `anchor_derive_accounts` crate, try updating your dependency with `cargo update -p anchor_derive_accounts`
+    = note: see <https://doc.rust-lang.org/nightly/rustc/check-cfg/cargo-specifics.html> for more information about checking conditional configuration
+    = note: this warning originates in the derive macro `Accounts` (in Nightly builds, run with -Z macro-backtrace for more info)
+
+error[E0277]: the trait bound `DepositCollateral<'_>: Bumps` is not satisfied
+   --> programs/ciphervault-core/src/lib.rs:48:14
+    |
+ 48 |         ctx: Context<DepositCollateral>,
+    |              ^^^^^^^^^^^^^^^^^^^^^^^^^^ unsatisfied trait bound
+    |
+help: the trait `Bumps` is not implemented for `DepositCollateral<'_>`
+   --> programs/ciphervault-core/src/lib.rs:261:1
+    |
+261 | pub struct DepositCollateral<'info> {
+    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    = help: the following other types implement trait `Bumps`:
+              CreateNonceAccount<'info>
+              CreateNonceAccountWithSeed<'info>
+              Initialize<'info>
+              PlaceOrder<'info>
+              SettleTrade<'info>
+              WithdrawCollateral<'info>
+              __idl::IdlAccounts<'info>
+              __idl::IdlCloseAccount<'info>
+            and 79 others
+note: required by a bound in `anchor_lang::context::Context`
+   --> /Users/gokulsmac/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/anchor-lang-0.30.1/src/context.rs:24:42
+    |
+ 24 | pub struct Context<'a, 'b, 'c, 'info, T: Bumps> {
+    |                                          ^^^^^ required by this bound in `Context`
+
+error[E0277]: the trait bound `DepositCollateral<'_>: Bumps` is not satisfied
+   --> programs/ciphervault-core/src/lib.rs:48:22
+    |
+ 48 |         ctx: Context<DepositCollateral>,
+    |                      ^^^^^^^^^^^^^^^^^ unsatisfied trait bound
+    |
+help: the trait `Bumps` is not implemented for `DepositCollateral<'_>`
+   --> programs/ciphervault-core/src/lib.rs:261:1
+    |
+261 | pub struct DepositCollateral<'info> {
+    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    = help: the following other types implement trait `Bumps`:
+              CreateNonceAccount<'info>
+              CreateNonceAccountWithSeed<'info>
+              Initialize<'info>
+              PlaceOrder<'info>
+              SettleTrade<'info>
+              WithdrawCollateral<'info>
+              __idl::IdlAccounts<'info>
+              __idl::IdlCloseAccount<'info>
+            and 79 others
+
+error[E0277]: the trait bound `DepositCollateral<'_>: Bumps` is not satisfied
+   --> programs/ciphervault-core/src/lib.rs:12:1
+    |
+ 12 | #[program]
+    | ^^^^^^^^^^ unsatisfied trait bound
+    |
+help: the trait `Bumps` is not implemented for `DepositCollateral<'_>`
+   --> programs/ciphervault-core/src/lib.rs:261:1
+    |
+261 | pub struct DepositCollateral<'info> {
+    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    = help: the following other types implement trait `Bumps`:
+              CreateNonceAccount<'info>
+              CreateNonceAccountWithSeed<'info>
+              Initialize<'info>
+              PlaceOrder<'info>
+              SettleTrade<'info>
+              WithdrawCollateral<'info>
+              __idl::IdlAccounts<'info>
+              __idl::IdlCloseAccount<'info>
+            and 79 others
+    = note: this error originates in the attribute macro `program` (in Nightly builds, run with -Z macro-backtrace for more info)
+
+error[E0599]: no function or associated item named `try_accounts` found for struct `DepositCollateral<'info>` in the current scope
+   --> programs/ciphervault-core/src/lib.rs:12:1
+    |
+ 12 | #[program]
+    | ^^^^^^^^^^ function or associated item not found in `DepositCollateral<'_>`
+...
+261 | pub struct DepositCollateral<'info> {
+    | ----------------------------------- function or associated item `try_accounts` not found for this struct
+    |
+    = help: items from traits can only be used if the trait is implemented and in scope
+    = note: the following trait defines an item `try_accounts`, perhaps you need to implement it:
+            candidate #1: `anchor_lang::Accounts`
+    = note: this error originates in the attribute macro `program` (in Nightly builds, run with -Z macro-backtrace for more info)
+
+error[E0277]: the trait bound `DepositCollateral<'_>: anchor_lang::Accounts<'_, _>` is not satisfied
+   --> programs/ciphervault-core/src/lib.rs:12:1
+    |
+ 12 | #[program]
+    | ^^^^^^^^^^ unsatisfied trait bound
+    |
+help: the trait `anchor_lang::Accounts<'_, _>` is not implemented for `DepositCollateral<'_>`
+   --> programs/ciphervault-core/src/lib.rs:261:1
+    |
+261 | pub struct DepositCollateral<'info> {
+    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    = help: the following other types implement trait `anchor_lang::Accounts<'info, B>`:
+              `AccountLoader<'info, T>` implements `anchor_lang::Accounts<'info, B>`
+              `Box<T>` implements `anchor_lang::Accounts<'info, B>`
+              `CreateNonceAccount<'info>` implements `anchor_lang::Accounts<'info, CreateNonceAccountBumps>`
+              `CreateNonceAccountWithSeed<'info>` implements `anchor_lang::Accounts<'info, CreateNonceAccountWithSeedBumps>`
+              `Initialize<'info>` implements `anchor_lang::Accounts<'info, InitializeBumps>`
+              `Interface<'info, T>` implements `anchor_lang::Accounts<'info, B>`
+              `InterfaceAccount<'info, T>` implements `anchor_lang::Accounts<'info, B>`
+              `Option<T>` implements `anchor_lang::Accounts<'info, B>`
+            and 92 others
+note: required by a bound in `anchor_lang::context::Context::<'a, 'b, 'c, 'info, T>::new`
+   --> /Users/gokulsmac/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/anchor-lang-0.30.1/src/context.rs:55:16
+    |
+ 55 |     T: Bumps + Accounts<'info, T::Bumps>,
+    |                ^^^^^^^^^^^^^^^^^^^^^^^^^ required by this bound in `Context::<'a, 'b, 'c, 'info, T>::new`
+ 56 | {
+ 57 |     pub fn new(
+    |            --- required by a bound in this associated function
+    = note: the full name for the type has been written to '/Users/gokulsmac/Desktop/encrypt/target/debug/deps/ciphervault_core-a340276147fe7095.long-type-3353957873515587403.txt'
+    = note: consider using `--verbose` to print the full type name to the console
+    = note: this error originates in the attribute macro `program` (in Nightly builds, run with -Z macro-backtrace for more info)
+
+error[E0277]: the trait bound `DepositCollateral<'_>: Bumps` is not satisfied in `anchor_lang::context::Context<'_, '_, '_, '_, DepositCollateral<'_>>`
+   --> programs/ciphervault-core/src/lib.rs:48:14
+    |
+ 48 |         ctx: Context<DepositCollateral>,
+    |              ^^^^^^^^^^^^^^^^^^^^^^^^^^ unsatisfied trait bound
+    |
+help: within `anchor_lang::context::Context<'_, '_, '_, '_, DepositCollateral<'_>>`, the trait `Bumps` is not implemented for `DepositCollateral<'_>`
+   --> programs/ciphervault-core/src/lib.rs:261:1
+    |
+261 | pub struct DepositCollateral<'info> {
+    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    = help: the following other types implement trait `Bumps`:
+              CreateNonceAccount<'info>
+              CreateNonceAccountWithSeed<'info>
+              Initialize<'info>
+              PlaceOrder<'info>
+              SettleTrade<'info>
+              WithdrawCollateral<'info>
+              __idl::IdlAccounts<'info>
+              __idl::IdlCloseAccount<'info>
+            and 79 others
+note: required because it appears within the type `anchor_lang::context::Context<'_, '_, '_, '_, DepositCollateral<'_>>`
+   --> /Users/gokulsmac/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/anchor-lang-0.30.1/src/context.rs:24:12
+    |
+ 24 | pub struct Context<'a, 'b, 'c, 'info, T: Bumps> {
+    |            ^^^^^^^
+help: function arguments must have a statically known size, borrowed types always have a known size
+    |
+ 48 |         ctx: &Context<DepositCollateral>,
+    |              +
+
+error[E0277]: the trait bound `DepositCollateral<'_>: Bumps` is not satisfied
+   --> programs/ciphervault-core/src/lib.rs:63:22
+    |
+ 63 |         vault.bump = ctx.bumps.collateral_vault;
+    |                      ^^^^^^^^^ unsatisfied trait bound
+    |
+help: the trait `Bumps` is not implemented for `DepositCollateral<'_>`
+   --> programs/ciphervault-core/src/lib.rs:261:1
+    |
+261 | pub struct DepositCollateral<'info> {
+    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    = help: the following other types implement trait `Bumps`:
+              CreateNonceAccount<'info>
+              CreateNonceAccountWithSeed<'info>
+              Initialize<'info>
+              PlaceOrder<'info>
+              SettleTrade<'info>
+              WithdrawCollateral<'info>
+              __idl::IdlAccounts<'info>
+              __idl::IdlCloseAccount<'info>
+            and 79 others
+
+For more information about this error, try `rustc --explain E0425`.
+warning: `collateral-vault` (lib) generated 16 warnings (5 duplicates)
+error: could not compile `collateral-vault` (lib) due to 3 previous errors; 16 warnings emitted
+warning: build failed, waiting for other jobs to finish...
+Some errors have detailed explanations: E0277, E0425, E0599.
+For more information about an error, try `rustc --explain E0277`.
+warning: `ciphervault-core` (lib) generated 15 warnings (5 duplicates)
+error: could not compile `ciphervault-core` (lib) due to 11 previous errors; 15 warnings emitted
