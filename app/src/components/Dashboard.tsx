@@ -304,7 +304,16 @@ export function Dashboard() {
             <button onClick={handleRegisterDWallet} disabled={loading} style={btnStyle("#38bdf8")}>
               {loading ? "Processing…" : "Register BTC dWallet"}
             </button>
-            <button onClick={handleRecordDeposit} disabled={loading} style={btnStyle("#34d399")}>
+            <button
+              onClick={handleRecordDeposit}
+              disabled={loading || vaultInfo.numPositions === 0}
+              title={vaultInfo.numPositions === 0 ? "Register a dWallet first" : ""}
+              style={{
+                ...btnStyle("#34d399"),
+                opacity: vaultInfo.numPositions === 0 ? 0.4 : 1,
+                cursor: vaultInfo.numPositions === 0 ? "not-allowed" : "pointer",
+              }}
+            >
               {loading ? "Processing…" : "Simulate Deposit (1.5 BTC)"}
             </button>
             <button onClick={loadVault} disabled={loading} style={btnStyle("#71717a")}>
@@ -313,6 +322,13 @@ export function Dashboard() {
           </>
         )}
       </div>
+
+      {/* Step hint */}
+      {!isLoading && vaultInfo && vaultInfo.numPositions === 0 && (
+        <div style={{ padding: "0.75rem 1rem", backgroundColor: "#1c1c22", border: "1px solid #a78bfa44", borderRadius: "8px", marginBottom: "1rem", fontSize: "0.8rem", color: "#a78bfa" }}>
+          ℹ️ Step 1: Register a BTC dWallet → Step 2: Simulate a Deposit
+        </div>
+      )}
 
       {/* Message */}
       {message && (
