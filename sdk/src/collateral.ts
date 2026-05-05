@@ -70,7 +70,7 @@ function getProgram(provider: AnchorProvider): Program {
     );
   }
 
-  return new Program(idl, COLLATERAL_VAULT_PROGRAM_ID, provider);
+  return new Program(idl, provider);
 }
 
 // ---------------------------------------------------------------------------
@@ -227,12 +227,14 @@ export async function getVaultState(
   const program = getProgram(provider);
   const [vaultPda] = deriveVaultPda(owner, program.programId);
 
-  const vaultAccount = await program.account.vaultAccount.fetch(vaultPda);
+  const vaultAccount = await (program.account as any).vaultAccount.fetch(vaultPda);
 
-  // Map on-chain positions to SDK CollateralPosition type
-  const positions: CollateralPosition[] = (
-    vaultAccount.positions as any[]
-  ).map((p: any) => {
+  // Map only active positions (first numPositions entries from fixed array)
+  const numPositions = vaultAccount.numPositions as number;
+  const allPositions = vaultAccount.positions as any[];
+  const activePositions = allPositions.slice(0, numPositions);
+
+  const positions: CollateralPosition[] = activePositions.map((p: any) => {
     const chainAsset = chainByteToChainAsset(p.chain);
     const healthFactor =
       vaultAccount.usedCreditUsd && (vaultAccount.usedCreditUsd as BN).gtn(0)
@@ -289,7 +291,7 @@ export async function getHealthFactor(
   const program = getProgram(provider);
   const [vaultPda] = deriveVaultPda(owner, program.programId);
 
-  const vaultAccount = await program.account.vaultAccount.fetch(vaultPda);
+  const vaultAccount = await (program.account as any).vaultAccount.fetch(vaultPda);
 
   const usedCredit = new BN(vaultAccount.usedCreditUsd as any);
   if (usedCredit.isZero()) {

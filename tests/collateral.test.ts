@@ -105,8 +105,10 @@ describe("collateral-vault", () => {
     expect((vault.totalCollateralUsd as BN).toNumber()).to.equal(0);
     expect((vault.usedCreditUsd as BN).toNumber()).to.equal(0);
     expect(vault.isFrozen).to.equal(false);
-    expect((vault.dwalletIds as any[]).length).to.equal(0);
-    expect((vault.positions as any[]).length).to.equal(0);
+    expect(vault.numPositions).to.equal(0);
+    // Fixed arrays always have 8 entries; numPositions tracks active count
+    expect((vault.dwalletIds as any[]).length).to.equal(8);
+    expect((vault.positions as any[]).length).to.equal(8);
   });
 
   // ---------------------------------------------------------------------------
@@ -118,14 +120,15 @@ describe("collateral-vault", () => {
 
     const vault = await program.account.vaultAccount.fetch(vaultPda);
 
-    // Check dWallet ID was stored
+    // Check numPositions incremented
+    expect(vault.numPositions).to.equal(1);
+
+    // Check dWallet ID was stored in slot 0
     const storedIds = vault.dwalletIds as number[][];
-    expect(storedIds.length).to.equal(1);
     expect(storedIds[0]).to.deep.equal(testDwalletId);
 
-    // Check position was created with zero amount
+    // Check position was created with zero amount in slot 0
     const positions = vault.positions as any[];
-    expect(positions.length).to.equal(1);
     expect(positions[0].chain).to.equal(0);
     expect(positions[0].asset).to.equal(0);
     expect((positions[0].rawAmount as BN).toNumber()).to.equal(0);

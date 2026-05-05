@@ -68,10 +68,13 @@ pub mod collateral_vault {
         vault.liquidation_threshold_bps = liquidation_threshold_bps;
         vault.total_collateral_usd = 0;
         vault.used_credit_usd = 0;
-        vault.dwallet_ids = Vec::new();
-        vault.positions = Vec::new();
+        vault.num_positions = 0;
         vault.is_frozen = false;
         vault.bump = ctx.bumps.vault;
+
+        // Zero-init the fixed arrays (already zeroed by Solana runtime, but explicit)
+        vault.dwallet_ids = [[0u8; 32]; MAX_POSITIONS];
+        vault.positions = [CollateralPosition::default(); MAX_POSITIONS];
 
         emit!(VaultInitialized {
             owner: vault.owner,
@@ -110,32 +113,32 @@ pub mod collateral_vault {
         require!(asset <= 6, CollateralVaultError::InvalidChainAsset);
 
         // Enforce max position limit
-        require!(
-            vault.dwallet_ids.len() < MAX_POSITIONS,
-            CollateralVaultError::ExceedsWalletLimit
-        );
+        let n = vault.num_positions as usize;
+        require!(n < MAX_POSITIONS, CollateralVaultError::ExceedsWalletLimit);
 
         // Check for duplicate registration
-        for existing in vault.dwallet_ids.iter() {
+        let zero_id = [0u8; 32];
+        for i in 0..n {
             require!(
-                *existing != dwallet_id,
+                vault.dwallet_ids[i] != dwallet_id,
                 CollateralVaultError::DWalletAlreadyRegistered
             );
         }
 
         // Register the dWallet
-        vault.dwallet_ids.push(dwallet_id);
+        vault.dwallet_ids[n] = dwallet_id;
 
         // Create initial empty position
         let slot = Clock::get()?.slot;
-        vault.positions.push(CollateralPosition {
+        vault.positions[n] = CollateralPosition {
             dwallet_id,
             chain,
             asset,
             raw_amount: 0,
             usd_value: 0,
             last_updated_slot: slot,
-        });
+        };
+        vault.num_positions += 1;
 
         // [IKA-VERIFY: In production, CPI to the Ika dWallet verifier program
         // (87W54kGYFQ1rgWqMeu4XTPHWXWmXSQCcjm8vCTfiq1oY on devnet) to confirm
@@ -194,10 +197,9 @@ pub mod collateral_vault {
         require!(usd_price_6dec > 0, CollateralVaultError::InvalidOraclePrice);
 
         // Find the position matching this dwallet_id
-        let position_idx = vault
-            .positions
-            .iter()
-            .position(|p| p.dwallet_id == dwallet_id)
+        let n = vault.num_positions as usize;
+        let position_idx = (0..n)
+            .find(|&i| vault.positions[i].dwallet_id == dwallet_id)
             .ok_or(CollateralVaultError::DWalletNotFound)?;
 
         // Update position
@@ -218,13 +220,12 @@ pub mod collateral_vault {
         position.last_updated_slot = Clock::get()?.slot;
 
         // Recalculate total collateral across all positions
-        let new_total: u64 = vault
-            .positions
-            .iter()
-            .map(|p| p.usd_value)
-            .try_fold(0u64, |acc, v| acc.checked_add(v))
-            .ok_or(CollateralVaultError::Overflow)?;
-
+        let mut new_total: u64 = 0;
+        for i in 0..n {
+            new_total = new_total
+                .checked_add(vault.positions[i].usd_value)
+                .ok_or(CollateralVaultError::Overflow)?;
+        }
         vault.total_collateral_usd = new_total;
 
         let deposit_usd = raw_amount
@@ -269,10 +270,9 @@ pub mod collateral_vault {
         require!(usd_price_6dec > 0, CollateralVaultError::InvalidOraclePrice);
 
         // Find position
-        let position_idx = vault
-            .positions
-            .iter()
-            .position(|p| p.dwallet_id == dwallet_id)
+        let n = vault.num_positions as usize;
+        let position_idx = (0..n)
+            .find(|&i| vault.positions[i].dwallet_id == dwallet_id)
             .ok_or(CollateralVaultError::DWalletNotFound)?;
 
         // Validate sufficient balance
@@ -325,12 +325,13 @@ pub mod collateral_vault {
         position.last_updated_slot = Clock::get()?.slot;
 
         // Recalculate total
-        vault.total_collateral_usd = vault
-            .positions
-            .iter()
-            .map(|p| p.usd_value)
-            .try_fold(0u64, |acc, v| acc.checked_add(v))
-            .ok_or(CollateralVaultError::Overflow)?;
+        let mut new_total: u64 = 0;
+        for i in 0..n {
+            new_total = new_total
+                .checked_add(vault.positions[i].usd_value)
+                .ok_or(CollateralVaultError::Overflow)?;
+        }
+        vault.total_collateral_usd = new_total;
 
         emit!(CollateralWithdrawn {
             owner: vault.owner,
@@ -403,15 +404,21 @@ pub mod collateral_vault {
 // Account Contexts
 // ---------------------------------------------------------------------------
 
+/// VaultAccount space:
+/// 8 (discriminator) + 32 (owner) + 32 (oracle_authority) + 2 (ltv_bps)
+/// + 2 (liquidation_threshold_bps) + 8 (total_collateral_usd)
+/// + 8 (used_credit_usd) + 1 (num_positions)
+/// + 32*8 (dwallet_ids) + 58*8 (positions)
+/// + 1 (is_frozen) + 1 (bump)
+/// = 8 + 32 + 32 + 2 + 2 + 8 + 8 + 1 + 256 + 464 + 1 + 1 = 815
+const VAULT_ACCOUNT_SPACE: usize = 8 + 32 + 32 + 2 + 2 + 8 + 8 + 1 + (32 * 8) + (58 * 8) + 1 + 1;
+
 #[derive(Accounts)]
 pub struct InitializeVault<'info> {
     #[account(
         init,
         payer = user,
-        // 8 discriminator + 32 owner + 32 oracle + 2 ltv + 2 liq_threshold
-        // + 8 total_col + 8 used_credit + 4 vec_len + (32*8) dwallet_ids
-        // + 4 vec_len + (58*8) positions + 1 frozen + 1 bump = 862
-        space = 8 + 32 + 32 + 2 + 2 + 8 + 8 + (4 + 32 * 8) + (4 + 58 * 8) + 1 + 1,
+        space = VAULT_ACCOUNT_SPACE,
         seeds = [b"vault", user.key().as_ref()],
         bump
     )]
@@ -497,8 +504,8 @@ pub struct UpdateCredit<'info> {
 // ---------------------------------------------------------------------------
 
 /// Per-user collateral vault. Holds up to 8 cross-chain positions, each
-/// backed by an Ika dWallet. The vault tracks aggregate USD collateral
-/// and outstanding credit for health factor computation.
+/// backed by an Ika dWallet. Uses fixed-size arrays for deterministic
+/// account sizing compatible with Anchor IDL generation.
 #[account]
 pub struct VaultAccount {
     /// The trader who owns this vault
@@ -513,10 +520,12 @@ pub struct VaultAccount {
     pub total_collateral_usd: u64,
     /// Outstanding credit/margin used (6 decimal precision)
     pub used_credit_usd: u64,
-    /// List of registered dWallet IDs (max 8)
-    pub dwallet_ids: Vec<[u8; 32]>,
-    /// Collateral positions corresponding to each dWallet (max 8)
-    pub positions: Vec<CollateralPosition>,
+    /// Number of active positions (index into dwallet_ids and positions)
+    pub num_positions: u8,
+    /// Registered dWallet IDs — fixed array, first `num_positions` entries are active
+    pub dwallet_ids: [[u8; 32]; 8],
+    /// Collateral positions — fixed array, first `num_positions` entries are active
+    pub positions: [CollateralPosition; 8],
     /// Emergency freeze flag
     pub is_frozen: bool,
     /// PDA bump seed
@@ -524,7 +533,7 @@ pub struct VaultAccount {
 }
 
 /// A single collateral position backed by an Ika dWallet.
-#[derive(AnchorSerialize, AnchorDeserialize, Clone, Copy, PartialEq, Eq, Debug)]
+#[derive(AnchorSerialize, AnchorDeserialize, Clone, Copy, PartialEq, Eq, Debug, Default)]
 pub struct CollateralPosition {
     /// The Ika dWallet ID (32-byte identifier)
     pub dwallet_id: [u8; 32],

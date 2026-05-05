@@ -5,6 +5,11 @@ members = [
 ]
 resolver = "2"
 
+# Pin transitive dependencies to versions compatible with Solana BPF toolchain
+# (platform-tools Cargo 1.79 does not support edition2024 in block-buffer 0.12)
+[workspace.dependencies]
+blake3 = "=1.6.1"
+
 [profile.release]
 overflow-checks = true
 lto = "fat"

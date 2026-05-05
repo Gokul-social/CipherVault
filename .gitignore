@@ -30,3 +30,4 @@ test-keypair.json
 
 # Test artifacts
 test-ledger/
+.vercel
