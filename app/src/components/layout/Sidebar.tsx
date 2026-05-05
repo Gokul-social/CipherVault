@@ -2,6 +2,7 @@
 
 import React from "react";
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { cn } from "../../lib/cn";
 
 interface NavItem {
@@ -9,7 +10,6 @@ interface NavItem {
   label: string;
   icon:  React.ReactNode;
   href:  string;
-  active?: boolean;
   badge?: string;
 }
 
@@ -19,25 +19,30 @@ const NAV_ITEMS: NavItem[] = [
     label: "Dashboard",
     icon:  <DashboardIcon />,
     href:  "/",
-    active: true,
   },
   {
     id:    "collateral",
     label: "Collateral",
     icon:  <CollateralIcon />,
-    href:  "#",
+    href:  "/collateral",
   },
   {
     id:    "dwallets",
     label: "dWallets",
     icon:  <DWalletIcon />,
-    href:  "#",
+    href:  "/dwallets",
+  },
+  {
+    id:    "trade",
+    label: "Trade",
+    icon:  <TradeIcon />,
+    href:  "/trade",
   },
   {
     id:    "history",
     label: "History",
     icon:  <HistoryIcon />,
-    href:  "#",
+    href:  "/history",
   },
 ];
 
@@ -57,6 +62,8 @@ const BOTTOM_ITEMS: NavItem[] = [
 ];
 
 export function Sidebar() {
+  const pathname = usePathname();
+
   return (
     <aside
       id="sidebar"
@@ -86,7 +93,7 @@ export function Sidebar() {
           </p>
           <ul className="space-y-0.5">
             {NAV_ITEMS.map((item) => (
-              <NavLink key={item.id} item={item} />
+              <NavLink key={item.id} item={item} currentPath={pathname} />
             ))}
           </ul>
         </div>
@@ -108,7 +115,7 @@ export function Sidebar() {
         {/* Bottom items */}
         <ul className="mt-1 space-y-0.5">
           {BOTTOM_ITEMS.map((item) => (
-            <NavLink key={item.id} item={item} />
+            <NavLink key={item.id} item={item} currentPath={pathname} />
           ))}
         </ul>
       </div>
@@ -116,13 +123,17 @@ export function Sidebar() {
   );
 }
 
-function NavLink({ item }: { item: NavItem }) {
+function NavLink({ item, currentPath }: { item: NavItem; currentPath: string }) {
   const isStub = item.href === "#";
+  const isExternal = item.href.startsWith("http");
+  const isActive = !isStub && !isExternal && (
+    item.href === "/" ? currentPath === "/" : currentPath.startsWith(item.href)
+  );
 
   const cls = cn(
     "group flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-body-sm",
     "transition-all duration-150",
-    item.active
+    isActive
       ? "bg-vault-elevated text-vault-text font-medium"
       : isStub
         ? "text-vault-muted cursor-default"
@@ -135,7 +146,7 @@ function NavLink({ item }: { item: NavItem }) {
       <span
         className={cn(
           "shrink-0 transition-colors duration-150",
-          item.active
+          isActive
             ? "text-vault-accent"
             : isStub
               ? "text-vault-muted"
@@ -145,10 +156,10 @@ function NavLink({ item }: { item: NavItem }) {
         {item.icon}
       </span>
       <span className="flex-1">{item.label}</span>
-      {item.active && (
+      {isActive && (
         <span className="h-1.5 w-1.5 rounded-full bg-vault-accent" />
       )}
-      {isStub && !item.active && (
+      {isStub && !isActive && (
         <span className="text-label-sm text-vault-muted opacity-0 group-hover:opacity-100 transition-opacity">
           Soon
         </span>
@@ -157,6 +168,15 @@ function NavLink({ item }: { item: NavItem }) {
   );
 
   if (isStub) return <li><button className={cls}>{inner}</button></li>;
+  if (isExternal) {
+    return (
+      <li>
+        <a href={item.href} target="_blank" rel="noopener noreferrer" className={cls}>
+          {inner}
+        </a>
+      </li>
+    );
+  }
 
   return (
     <li>
@@ -167,7 +187,7 @@ function NavLink({ item }: { item: NavItem }) {
   );
 }
 
-// ── Icons ──────────────────────────────────────────────────────────────────────
+// ── Icons ──────────────────────────────────────────────────────────────────
 
 function CipherVaultLogo() {
   return (
@@ -204,6 +224,14 @@ function DWalletIcon() {
       <rect x="1" y="4" width="14" height="9" rx="1.5" stroke="currentColor" strokeWidth="1.3"/>
       <circle cx="11.5" cy="8.5" r="1.5" fill="currentColor"/>
       <path d="M1 7h14" stroke="currentColor" strokeWidth="1.3"/>
+    </svg>
+  );
+}
+
+function TradeIcon() {
+  return (
+    <svg className="h-4 w-4" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <path d="M3 3l5 10 2-5 5-2L3 3z" stroke="currentColor" strokeWidth="1.2" strokeLinejoin="round"/>
     </svg>
   );
 }

@@ -1,6 +1,7 @@
 import React from "react";
 import { Sidebar } from "../components/layout/Sidebar";
 import { TopBar } from "../components/layout/TopBar";
+import { TransactionToast } from "../components/ui/TransactionToast";
 import { cn } from "../lib/cn";
 
 interface AppLayoutProps {
@@ -39,6 +40,9 @@ export function AppLayout({
           {children}
         </div>
       </main>
+
+      {/* Global transaction toasts */}
+      <TransactionToast />
     </div>
   );
 }

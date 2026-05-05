@@ -13,9 +13,11 @@ export const VAULT_PROGRAM_ID = new PublicKey(
 
 // ── Anchor discriminators (sha256("global:<name>")[0:8]) ──────────────────────
 export const DISC = {
-  initializeVault: Buffer.from([48, 191, 163, 44, 71, 129, 63, 164]),
-  registerDwallet: Buffer.from([186, 119, 139, 52, 93, 184, 231, 1]),
-  recordDeposit:   Buffer.from([98, 130, 249, 185, 16, 42, 16, 162]),
+  initializeVault:  Buffer.from([48, 191, 163, 44, 71, 129, 63, 164]),
+  registerDwallet:  Buffer.from([186, 119, 139, 52, 93, 184, 231, 1]),
+  recordDeposit:    Buffer.from([98, 130, 249, 185, 16, 42, 16, 162]),
+  recordWithdrawal: Buffer.from([183, 98, 220, 220, 200, 81, 42, 132]),
+  updateCredit:     Buffer.from([65, 140, 57, 168, 120, 45, 193, 194]),
 };
 
 // ── Vault data shape ──────────────────────────────────────────────────────────
@@ -138,6 +140,61 @@ export function buildRecordDepositIx(
     keys: [
       { pubkey: vaultPda, isSigner: false, isWritable: true  },
       { pubkey: owner,    isSigner: true,  isWritable: false },
+    ],
+    data,
+  });
+}
+
+/**
+ * Builds a record_withdrawal instruction.
+ * record_withdrawal: [disc(8) + dwalletId(32) + rawAmount(8) + usdPrice6dec(8)]
+ */
+export function buildRecordWithdrawalIx(
+  owner: PublicKey,
+  vaultPda: PublicKey,
+  dwalletId?: Buffer,
+  rawAmount: bigint = BigInt(50_000_000),
+  usdPrice6dec: bigint = BigInt(65_000_000_000)
+): TransactionInstruction {
+  const dwId = dwalletId ?? (() => {
+    const b = Buffer.alloc(32);
+    owner.toBuffer().copy(b);
+    return b;
+  })();
+  const data = Buffer.concat([
+    DISC.recordWithdrawal,
+    dwId,
+    encodeU64LE(rawAmount),
+    encodeU64LE(usdPrice6dec),
+  ]);
+  return new TransactionInstruction({
+    programId: VAULT_PROGRAM_ID,
+    keys: [
+      { pubkey: vaultPda, isSigner: false, isWritable: true },
+      { pubkey: owner,    isSigner: true,  isWritable: false },
+    ],
+    data,
+  });
+}
+
+/**
+ * Builds an update_credit instruction.
+ * update_credit: [disc(8) + newUsedCreditUsd(8)]
+ */
+export function buildUpdateCreditIx(
+  owner: PublicKey,
+  vaultPda: PublicKey,
+  newUsedCreditUsd: bigint
+): TransactionInstruction {
+  const data = Buffer.concat([
+    DISC.updateCredit,
+    encodeU64LE(newUsedCreditUsd),
+  ]);
+  return new TransactionInstruction({
+    programId: VAULT_PROGRAM_ID,
+    keys: [
+      { pubkey: vaultPda, isSigner: false, isWritable: true },
+      { pubkey: owner,    isSigner: true,  isWritable: true },
     ],
     data,
   });
