@@ -224,7 +224,15 @@ const COLLATERAL_VAULT_IDL: Idl = {
 } as any;
 
 function getProgram(provider: AnchorProvider): Program {
-  return new Program(COLLATERAL_VAULT_IDL, provider);
+  // Anchor 0.30.x: new Program(idl, provider) reads programId from idl.metadata.address
+  // We explicitly set the address in our inlined IDL above.
+  // If Anchor still fails to resolve it, we force-set it after construction.
+  const program = new Program(COLLATERAL_VAULT_IDL, provider);
+  if (!program.programId || program.programId.toBase58() === "11111111111111111111111111111111") {
+    // Fallback: force the correct program ID
+    (program as any)._programId = COLLATERAL_VAULT_PROGRAM_ID;
+  }
+  return program;
 }
 
 // ---------------------------------------------------------------------------
