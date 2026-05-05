@@ -1,4 +1,15 @@
+"use client";
+
+import { useWallet } from "@solana/wallet-adapter-react";
+import { Dashboard } from "../components/Dashboard";
+
 export default function Home() {
+  const { publicKey } = useWallet();
+
+  if (publicKey) {
+    return <Dashboard />;
+  }
+
   return (
     <main
       style={{
@@ -62,6 +73,7 @@ export default function Home() {
             gap: "1rem",
             justifyContent: "center",
             flexWrap: "wrap",
+            marginBottom: "3rem",
           }}
         >
           {[
@@ -103,20 +115,8 @@ export default function Home() {
           ))}
         </div>
 
-        <div
-          style={{
-            marginTop: "3rem",
-            padding: "1rem",
-            borderRadius: "8px",
-            backgroundColor: "#1c1c22",
-            border: "1px solid #27272a",
-            fontFamily: "'JetBrains Mono', monospace",
-            fontSize: "0.8rem",
-            color: "#71717a",
-          }}
-        >
-          Phase 1: Scaffold ✓ — Dashboard and wallet connection coming in Phase 2
-        </div>
+        <Dashboard />
+
       </div>
     </main>
   );

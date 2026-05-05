@@ -8,8 +8,8 @@ import {
   ChainAsset,
   CHAIN_ASSET_LABELS,
   CHAIN_ASSET_DECIMALS,
-} from "./types.js";
-import { getChainCryptoConfig, IkaClient, createDevnetIkaClient } from "./ika-client.js";
+} from "./types";
+import { getChainCryptoConfig, IkaClient, createDevnetIkaClient } from "./ika-client";
 
 // ---------------------------------------------------------------------------
 // IDL + Program ID

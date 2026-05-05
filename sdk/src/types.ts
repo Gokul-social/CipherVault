@@ -218,8 +218,8 @@ export interface CipherVaultConfig {
 export const DEVNET_CONFIG: CipherVaultConfig = {
   rpcEndpoint: "https://api.devnet.solana.com",
   wsEndpoint: "wss://api.devnet.solana.com",
-  coreProgramId: new PublicKey("CVau1tC0rePr0gramXXXXXXXXXXXXXXXXXXXXXXXXX"),
-  vaultProgramId: new PublicKey("CVau1tC011atera1XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"),
+  coreProgramId: new PublicKey("8Voz2Petb9Q4xYMCqjNVXSyTzkmzMsK3cTrSVGGLF8Ug"),
+  vaultProgramId: new PublicKey("4jJrbTHiAP5ocWhbUqJG6m1bQ6cRkNi7vJvHWpRABwBm"),
 };
 
 // ---------------------------------------------------------------------------

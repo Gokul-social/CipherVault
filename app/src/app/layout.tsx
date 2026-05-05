@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { WalletContextProvider } from "../components/WalletContextProvider";
 
 export const metadata: Metadata = {
   title: "CipherVault | Confidential Institutional Prime Brokerage",
@@ -45,7 +46,9 @@ export default function RootLayout({
           minHeight: "100vh",
         }}
       >
-        {children}
+        <WalletContextProvider>
+          {children}
+        </WalletContextProvider>
       </body>
     </html>
   );
