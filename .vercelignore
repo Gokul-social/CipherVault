@@ -1,0 +1,13 @@
+node_modules
+target
+.anchor
+.git
+.vercel
+app/.next
+app/out
+test-ledger
+sdk/node_modules
+app/node_modules
+dist
+check.log
+cv.log
