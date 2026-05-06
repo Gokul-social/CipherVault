@@ -5,24 +5,39 @@ import { cn } from "../../lib/cn";
 import { Button } from "../ui/Button";
 import { ConfirmModal } from "../ui/ConfirmModal";
 
+const ASSET_PAIRS = [
+  { id: "BTC", label: "BTC/USD", decimals: 8,  multiplier: 100_000_000, defaultPrice: "65000" },
+  { id: "ETH", label: "ETH/USD", decimals: 6,  multiplier: 1_000_000,   defaultPrice: "3200"  },
+  { id: "SOL", label: "SOL/USD", decimals: 4,  multiplier: 10_000,      defaultPrice: "170"   },
+];
+
 interface OrderFormProps {
-  onSubmit: (size: bigint, price: bigint, direction: number) => Promise<void>;
+  onSubmit: (size: bigint, price: bigint, direction: number, asset: string) => Promise<void>;
   isBusy: boolean;
   availableCredit: string;
 }
 
 export function OrderForm({ onSubmit, isBusy, availableCredit }: OrderFormProps) {
-  const [size, setSize] = useState("");
-  const [price, setPrice] = useState("");
-  const [direction, setDirection] = useState<0 | 1>(0); // 0=Long, 1=Short
-  const [error, setError] = useState("");
+  const [assetIndex, setAssetIndex] = useState(0);
+  const [size, setSize]             = useState("");
+  const [price, setPrice]           = useState(ASSET_PAIRS[0].defaultPrice);
+  const [direction, setDirection]   = useState<0 | 1>(0); // 0=Long, 1=Short
+  const [error, setError]           = useState("");
   const [showConfirm, setShowConfirm] = useState(false);
+
+  const pair = ASSET_PAIRS[assetIndex];
+
+  const handleAssetChange = (idx: number) => {
+    setAssetIndex(idx);
+    setSize("");
+    setPrice(ASSET_PAIRS[idx].defaultPrice);
+    setError("");
+  };
 
   const validate = (): boolean => {
     setError("");
-    const sizeNum = parseFloat(size);
+    const sizeNum  = parseFloat(size);
     const priceNum = parseFloat(price);
-
     if (!size || isNaN(sizeNum) || sizeNum <= 0) {
       setError("Order size must be greater than 0");
       return false;
@@ -41,11 +56,10 @@ export function OrderForm({ onSubmit, isBusy, availableCredit }: OrderFormProps)
 
   const handleConfirm = async () => {
     setShowConfirm(false);
-    const rawSize = BigInt(Math.floor(parseFloat(size) * 100_000_000));
+    const rawSize  = BigInt(Math.floor(parseFloat(size) * pair.multiplier));
     const rawPrice = BigInt(Math.floor(parseFloat(price) * 1_000_000));
-    await onSubmit(rawSize, rawPrice, direction);
+    await onSubmit(rawSize, rawPrice, direction, pair.id);
     setSize("");
-    setPrice("");
   };
 
   const notional = (parseFloat(size) || 0) * (parseFloat(price) || 0);
@@ -57,6 +71,29 @@ export function OrderForm({ onSubmit, isBusy, availableCredit }: OrderFormProps)
           <OrderIcon />
           Place Encrypted Order
         </h3>
+
+        {/* Asset Pair Selector */}
+        <div className="mb-4">
+          <label className="text-label-md uppercase tracking-widest text-vault-muted mb-1.5 block">
+            Asset Pair
+          </label>
+          <div className="flex gap-1 rounded-lg bg-vault-elevated p-1">
+            {ASSET_PAIRS.map((p, idx) => (
+              <button
+                key={p.id}
+                onClick={() => handleAssetChange(idx)}
+                className={cn(
+                  "flex-1 rounded-md py-1.5 text-body-xs font-medium transition-all duration-150",
+                  assetIndex === idx
+                    ? "bg-vault-surface text-vault-text shadow-sm"
+                    : "text-vault-subtext hover:text-vault-text"
+                )}
+              >
+                {p.label}
+              </button>
+            ))}
+          </div>
+        </div>
 
         {/* Direction Toggle */}
         <div className="flex gap-1 rounded-lg bg-vault-elevated p-1 mb-4">
@@ -87,11 +124,11 @@ export function OrderForm({ onSubmit, isBusy, availableCredit }: OrderFormProps)
         {/* Size Input */}
         <div className="mb-3">
           <label className="text-label-md uppercase tracking-widest text-vault-muted mb-1.5 block">
-            Size (BTC)
+            Size ({pair.id})
           </label>
           <input
             type="number"
-            step="0.00000001"
+            step={1 / pair.multiplier}
             min="0"
             value={size}
             onChange={(e) => setSize(e.target.value)}
@@ -118,7 +155,7 @@ export function OrderForm({ onSubmit, isBusy, availableCredit }: OrderFormProps)
             min="0"
             value={price}
             onChange={(e) => setPrice(e.target.value)}
-            placeholder="65000"
+            placeholder={pair.defaultPrice}
             disabled={isBusy}
             className={cn(
               "w-full rounded-lg border border-vault-border bg-vault-elevated px-3 py-2",
@@ -136,13 +173,13 @@ export function OrderForm({ onSubmit, isBusy, availableCredit }: OrderFormProps)
             <div className="flex justify-between text-body-xs">
               <span className="text-vault-muted">Notional</span>
               <span className="font-mono text-vault-text">
-                ${notional.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                ${notional.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
               </span>
             </div>
             <div className="flex justify-between text-body-xs">
               <span className="text-vault-muted">Direction</span>
               <span className={cn("font-medium", direction === 0 ? "text-vault-success" : "text-vault-danger")}>
-                {direction === 0 ? "Long" : "Short"}
+                {direction === 0 ? "Long" : "Short"} {pair.id}
               </span>
             </div>
             <div className="flex justify-between text-body-xs">
@@ -178,7 +215,7 @@ export function OrderForm({ onSubmit, isBusy, availableCredit }: OrderFormProps)
           loading={isBusy}
           icon={<OrderIcon />}
         >
-          {direction === 0 ? "Place Long Order" : "Place Short Order"}
+          {direction === 0 ? `Place Long ${pair.id}` : `Place Short ${pair.id}`}
         </Button>
       </div>
 
@@ -187,7 +224,7 @@ export function OrderForm({ onSubmit, isBusy, availableCredit }: OrderFormProps)
         onClose={() => setShowConfirm(false)}
         onConfirm={handleConfirm}
         title="Confirm Order"
-        description={`Place a ${direction === 0 ? "Long" : "Short"} order for ${size} BTC at $${price}. Notional: $${notional.toLocaleString()}.`}
+        description={`Place a ${direction === 0 ? "Long" : "Short"} order for ${size} ${pair.id} at $${price}. Notional: $${notional.toLocaleString(undefined, { maximumFractionDigits: 2 })}.`}
         confirmLabel="Encrypt & Submit"
         variant="accent"
         loading={isBusy}
@@ -212,3 +249,4 @@ function LockIcon() {
     </svg>
   );
 }
+

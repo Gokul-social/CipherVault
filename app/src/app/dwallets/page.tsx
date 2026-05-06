@@ -16,6 +16,13 @@ import { deriveVaultPda, buildRegisterDwalletIx } from "../../lib/vault";
 import { shortenAddress } from "../../lib/format";
 import { cn } from "../../lib/cn";
 
+// Chain → on-chain chain/asset enum mapping
+const CHAIN_ASSET_MAP: Record<number, { chain: number; asset: number }> = {
+  0: { chain: 0, asset: 0 }, // Bitcoin → BTC
+  1: { chain: 1, asset: 1 }, // Ethereum → ETH
+  2: { chain: 2, asset: 2 }, // Solana → SOL
+};
+
 export default function DWalletsPage() {
   const { publicKey, sendTransaction } = useWallet();
   const { connection } = useConnection();
@@ -37,11 +44,12 @@ export default function DWalletsPage() {
   const handleRegister = async () => {
     if (!publicKey) return;
     const vaultPda = deriveVaultPda(publicKey);
+    const { chain, asset } = CHAIN_ASSET_MAP[selectedChain] ?? { chain: 0, asset: 0 };
 
     await runTransaction({
       label: `Register ${CHAINS[selectedChain].label} dWallet`,
       buildTx: () => {
-        const ix = buildRegisterDwalletIx(publicKey, vaultPda);
+        const ix = buildRegisterDwalletIx(publicKey, vaultPda, chain, asset);
         const tx = new Transaction().add(ix);
         tx.feePayer = publicKey;
         return tx;

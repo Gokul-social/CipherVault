@@ -103,15 +103,17 @@ export function buildInitializeVaultIx(
 
 export function buildRegisterDwalletIx(
   owner: PublicKey,
-  vaultPda: PublicKey
+  vaultPda: PublicKey,
+  chain: number = 0,
+  asset: number = 0
 ): TransactionInstruction {
   const dwalletId = Buffer.alloc(32);
   owner.toBuffer().copy(dwalletId);
   const data = Buffer.concat([
     DISC.registerDwallet,
     dwalletId,
-    Buffer.from([0]), // chain = BTC
-    Buffer.from([0]), // asset = 0
+    Buffer.from([chain]), // chain: 0=BTC, 1=ETH, 2=SOL
+    Buffer.from([asset]), // asset: 0=BTC, 1=ETH, 2=SOL, ...
   ]);
   return new TransactionInstruction({
     programId: VAULT_PROGRAM_ID,

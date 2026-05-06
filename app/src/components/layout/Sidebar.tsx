@@ -4,6 +4,7 @@ import React from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "../../lib/cn";
+import { useThemeStore } from "../../hooks/useThemeStore";
 
 interface NavItem {
   id:    string;
@@ -51,18 +52,23 @@ const BOTTOM_ITEMS: NavItem[] = [
     id:    "settings",
     label: "Settings",
     icon:  <SettingsIcon />,
-    href:  "#",
+    href:  "/settings",
   },
   {
     id:    "docs",
     label: "Documentation",
     icon:  <DocsIcon />,
-    href:  "https://docs.ciphervault.xyz",
+    href:  "/docs",
   },
 ];
 
 export function Sidebar() {
   const pathname = usePathname();
+  const { theme, toggleTheme, initTheme } = useThemeStore();
+
+  React.useEffect(() => {
+    initTheme();
+  }, []);
 
   return (
     <aside
@@ -110,6 +116,14 @@ export function Sidebar() {
             <p className="text-body-xs font-medium text-vault-text truncate">Solana Devnet</p>
             <p className="text-label-sm text-vault-muted">Connected</p>
           </div>
+          {/* Theme toggle button */}
+          <button
+            onClick={toggleTheme}
+            title={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
+            className="shrink-0 flex h-7 w-7 items-center justify-center rounded-lg border border-vault-border text-vault-muted hover:text-vault-text hover:border-vault-muted transition-all duration-150"
+          >
+            {theme === "dark" ? <SunIcon /> : <MoonIcon />}
+          </button>
         </div>
 
         {/* Bottom items */}
@@ -260,6 +274,23 @@ function DocsIcon() {
     <svg className="h-4 w-4" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
       <rect x="2" y="1" width="12" height="14" rx="2" stroke="currentColor" strokeWidth="1.3"/>
       <path d="M5 5h6M5 8h6M5 11h4" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round"/>
+    </svg>
+  );
+}
+
+function SunIcon() {
+  return (
+    <svg className="h-3.5 w-3.5" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <circle cx="8" cy="8" r="3" stroke="currentColor" strokeWidth="1.3"/>
+      <path d="M8 1v2M8 13v2M1 8h2M13 8h2M3.05 3.05l1.41 1.41M11.54 11.54l1.41 1.41M3.05 12.95l1.41-1.41M11.54 4.46l1.41-1.41" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round"/>
+    </svg>
+  );
+}
+
+function MoonIcon() {
+  return (
+    <svg className="h-3.5 w-3.5" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <path d="M13.5 10A6 6 0 0 1 6 2.5a6 6 0 1 0 7.5 7.5z" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round"/>
     </svg>
   );
 }

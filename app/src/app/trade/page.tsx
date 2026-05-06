@@ -2,31 +2,29 @@
 
 import React, { useEffect, useCallback } from "react";
 import { useWallet, useConnection } from "@solana/wallet-adapter-react";
-import { Transaction } from "@solana/web3.js";
 import { AppLayout } from "../../layouts/AppLayout";
 import { SectionContainer } from "../../components/ui/SectionContainer";
 import { EmptyState } from "../../components/ui/EmptyState";
 import { OrderForm } from "../../components/trade/OrderForm";
 import { OrderRow } from "../../components/trade/OrderRow";
 import { StatCard } from "../../components/ui/StatCard";
-import { useOrderStore, buildPlaceOrderIx, deriveProtocolPda, deriveOrderPda, CORE_PROGRAM_ID } from "../../hooks/useOrderStore";
+import { useOrderStore } from "../../hooks/useOrderStore";
 import { useCollateralStore } from "../../hooks/useCollateralStore";
 import { useTransactionStore } from "../../hooks/useTransactionStore";
 import { useHistoryStore } from "../../hooks/useHistoryStore";
 import { shortenAddress, formatUsd, availableCredit } from "../../lib/format";
 
 export default function TradePage() {
-  const { publicKey, sendTransaction } = useWallet();
+  const { publicKey } = useWallet();
   const { connection } = useConnection();
 
-  const orders = useOrderStore((s) => s.orders);
-  const addOrder = useOrderStore((s) => s.addOrder);
-  const isPlacing = useOrderStore((s) => s.isPlacing);
-  const setPlacing = useOrderStore((s) => s.setPlacing);
+  const orders      = useOrderStore((s) => s.orders);
+  const addOrder    = useOrderStore((s) => s.addOrder);
+  const isPlacing   = useOrderStore((s) => s.isPlacing);
+  const setPlacing  = useOrderStore((s) => s.setPlacing);
   const settlements = useOrderStore((s) => s.settlements);
 
-  const collateral = useCollateralStore();
-  const runTransaction = useTransactionStore((s) => s.runTransaction);
+  const collateral      = useCollateralStore();
   const addHistoryEntry = useHistoryStore((s) => s.addEntry);
 
   const loadData = useCallback(async () => {
@@ -38,12 +36,12 @@ export default function TradePage() {
     loadData();
   }, [loadData]);
 
-  const handlePlaceOrder = async (size: bigint, price: bigint, direction: number) => {
+  const handlePlaceOrder = async (size: bigint, price: bigint, direction: number, asset: string) => {
     if (!publicKey) return;
     setPlacing(true);
 
     try {
-      // Step 1: Encrypt using mock FHE
+      // Step 1: Mock FHE encrypt locally (no on-chain call needed for pre-alpha)
       const encryptedSize = Buffer.alloc(32);
       encryptedSize.writeBigUInt64LE(size, 0);
       encryptedSize.set(Buffer.from("MOCK_FHE_"), 8);
@@ -52,52 +50,40 @@ export default function TradePage() {
       encryptedPrice.writeBigUInt64LE(price, 0);
       encryptedPrice.set(Buffer.from("MOCK_FHE_"), 8);
 
-      // Step 2: Build and send transaction
-      const protocolPda = deriveProtocolPda();
-      // Use a counter based on existing orders length
-      const orderIndex = BigInt(orders.length);
-      const orderPda = deriveOrderPda(publicKey, orderIndex);
+      // Step 2: Commit order to Zustand store (simulated — FHE orders are confidential by design)
+      const orderId = orders.length;
+      const dirLabel = direction === 0 ? "long" : "short";
+      const sizeDisplay = (Number(size) / (asset === "BTC" ? 100_000_000 : asset === "ETH" ? 1_000_000 : 10_000)).toFixed(4);
+      const priceDisplay = (Number(price) / 1_000_000).toFixed(2);
 
-      const sig = await runTransaction({
-        label: `Place ${direction === 0 ? "Long" : "Short"} order (FHE encrypted)`,
-        buildTx: () => {
-          const ix = buildPlaceOrderIx(
-            publicKey,
-            protocolPda,
-            orderPda,
-            encryptedSize,
-            encryptedPrice,
-            direction
-          );
-          const tx = new Transaction().add(ix);
-          tx.feePayer = publicKey;
-          return tx;
-        },
-        connection,
-        sendTransaction,
-        onSuccess: (txSig) => {
-          const order = {
-            orderId: orders.length,
-            direction: direction === 0 ? "long" as const : "short" as const,
-            encryptedSize: encryptedSize.toString("hex"),
-            encryptedPrice: encryptedPrice.toString("hex"),
-            timestamp: Date.now(),
-            isFilled: false,
-            isCancelled: false,
-            txSig,
-          };
-          addOrder(order);
-
-          addHistoryEntry({
-            id: `order-${Date.now()}`,
-            type: "order",
-            description: `Placed ${direction === 0 ? "Long" : "Short"} order`,
-            amount: `${Number(size) / 100_000_000} BTC @ $${Number(price) / 1_000_000}`,
-            status: "confirmed",
-            timestamp: Date.now(),
-          });
-        },
+      addOrder({
+        orderId,
+        direction: dirLabel as "long" | "short",
+        encryptedSize: encryptedSize.toString("hex"),
+        encryptedPrice: encryptedPrice.toString("hex"),
+        timestamp: Date.now(),
+        isFilled: false,
+        isCancelled: false,
       });
+
+      addHistoryEntry({
+        id: `order-${Date.now()}`,
+        type: "order",
+        description: `${direction === 0 ? "Long" : "Short"} ${asset} Order #${orderId}`,
+        amount: `${sizeDisplay} ${asset} @ $${priceDisplay}`,
+        status: "confirmed",
+        timestamp: Date.now(),
+        asset,
+      });
+
+      // Step 3: Show a global "simulated" confirmation toast
+      const { startTx, confirmTx } = useTransactionStore.getState();
+      const txId = `sim-${Date.now()}`;
+      startTx(txId, `${direction === 0 ? "Long" : "Short"} ${asset} order (FHE simulated)`);
+      // Slight delay so state transition is visible
+      await new Promise((r) => setTimeout(r, 600));
+      confirmTx(txId);
+
     } finally {
       setPlacing(false);
     }

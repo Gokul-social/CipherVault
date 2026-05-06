@@ -19,10 +19,26 @@ export const metadata: Metadata = {
   ],
 };
 
+// Inline script runs before React hydrates — prevents flash of wrong theme
+const themeScript = `
+(function(){
+  try {
+    var t = localStorage.getItem('cv-theme');
+    if (t === 'light' || t === 'dark') {
+      document.documentElement.setAttribute('data-theme', t);
+    } else {
+      document.documentElement.setAttribute('data-theme', 'dark');
+    }
+  } catch(e) {}
+})();
+`;
+
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en" className="bg-vault-bg">
       <head>
+        {/* Flash-free theme init — must run before any CSS */}
+        <script dangerouslySetInnerHTML={{ __html: themeScript }} />
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
         <link
