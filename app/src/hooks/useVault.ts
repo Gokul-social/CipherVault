@@ -99,7 +99,12 @@ export function useVault(): UseVaultReturn {
     const pda = deriveVaultPda(publicKey);
     await runTransaction({
       label: "Initializing vault…",
-      buildTx: () => new Transaction().add(buildInitializeVaultIx(publicKey, pda)),
+      buildTx: () => {
+        const tx = new Transaction();
+        tx.feePayer = publicKey;
+        tx.add(buildInitializeVaultIx(publicKey, pda));
+        return tx;
+      },
       connection,
       sendTransaction,
       onSuccess: () => loadVault(),
@@ -111,7 +116,12 @@ export function useVault(): UseVaultReturn {
     const pda = deriveVaultPda(publicKey);
     await runTransaction({
       label: "Registering BTC dWallet…",
-      buildTx: () => new Transaction().add(buildRegisterDwalletIx(publicKey, pda)),
+      buildTx: () => {
+        const tx = new Transaction();
+        tx.feePayer = publicKey;
+        tx.add(buildRegisterDwalletIx(publicKey, pda, 0, 0));
+        return tx;
+      },
       connection,
       sendTransaction,
       onSuccess: () => loadVault(),
@@ -123,7 +133,12 @@ export function useVault(): UseVaultReturn {
     const pda = deriveVaultPda(publicKey);
     await runTransaction({
       label: "Recording deposit…",
-      buildTx: () => new Transaction().add(buildRecordDepositIx(publicKey, pda)),
+      buildTx: () => {
+        const tx = new Transaction();
+        tx.feePayer = publicKey;
+        tx.add(buildRecordDepositIx(publicKey, pda));
+        return tx;
+      },
       connection,
       sendTransaction,
       onSuccess: () => loadVault(),
