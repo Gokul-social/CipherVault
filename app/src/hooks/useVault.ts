@@ -10,11 +10,13 @@ import {
   buildInitializeVaultIx,
   buildRegisterDwalletIx,
   buildRecordDepositIx,
-  sendAndConfirm,
 } from "../lib/vault";
+import { useTransactionStore } from "./useTransactionStore";
+import { useCollateralStore } from "./useCollateralStore";
 
 export type VaultState = VaultInfo | null | "loading";
 
+// Legacy message type — kept for Dashboard backward-compatibility
 export interface TxMessage {
   type: "success" | "error" | "info";
   text: string;
@@ -22,13 +24,13 @@ export interface TxMessage {
 }
 
 export interface UseVaultReturn {
-  vaultInfo:          VaultState;
-  txMessage:          TxMessage | null;
-  isBusy:             boolean;
-  vaultPda:           string | null;
-  loadVault:          () => Promise<void>;
-  clearMessage:       () => void;
-  handleInitVault:    () => Promise<void>;
+  vaultInfo:             VaultState;
+  txMessage:             TxMessage | null;
+  isBusy:                boolean;
+  vaultPda:              string | null;
+  loadVault:             () => Promise<void>;
+  clearMessage:          () => void;
+  handleInitVault:       () => Promise<void>;
   handleRegisterDWallet: () => Promise<void>;
   handleRecordDeposit:   () => Promise<void>;
 }
@@ -37,26 +39,52 @@ export function useVault(): UseVaultReturn {
   const { publicKey, sendTransaction } = useWallet();
   const { connection } = useConnection();
 
+  // ── Zustand stores ───────────────────────────────────────────────────────
+  const runTransaction = useTransactionStore((s) => s.runTransaction);
+  const txEntries      = useTransactionStore((s) => s.entries);
+  const fetchPositions = useCollateralStore((s) => s.fetchPositions);
+
+  // ── Local legacy state (keeps Dashboard API stable) ──────────────────────
   const [vaultInfo, setVaultInfo] = useState<VaultState>("loading");
   const [txMessage, setTxMessage] = useState<TxMessage | null>(null);
-  const [isBusy, setIsBusy] = useState(false);
+  const [isBusy, setIsBusy]       = useState(false);
+
+  // Mirror latest Zustand tx entry → legacy txMessage banner
+  useEffect(() => {
+    const latest = txEntries[0];
+    if (!latest) return;
+    if (latest.state === "confirmed") {
+      setTxMessage({ type: "success", text: "Transaction confirmed", sig: latest.sig });
+      setIsBusy(false);
+    } else if (latest.state === "failed") {
+      setTxMessage({ type: "error", text: latest.error ?? "Transaction failed" });
+      setIsBusy(false);
+    } else if (latest.state === "signing" || latest.state === "pending") {
+      setTxMessage({ type: "info", text: latest.label });
+      setIsBusy(true);
+    }
+  }, [txEntries]);
 
   const vaultPda = useMemo(
     () => (publicKey ? deriveVaultPda(publicKey).toBase58() : null),
     [publicKey]
   );
 
+  // ── loadVault — refreshes raw vault + collateral store ───────────────────
   const loadVault = useCallback(async () => {
     if (!publicKey) return;
     setVaultInfo("loading");
     try {
-      const info = await fetchVaultInfo(connection, publicKey);
+      const [info] = await Promise.all([
+        fetchVaultInfo(connection, publicKey),
+        fetchPositions(connection, publicKey),
+      ]);
       setVaultInfo(info);
     } catch (e) {
-      console.error("fetchVaultInfo:", e);
+      console.error("loadVault:", e);
       setVaultInfo(null);
     }
-  }, [publicKey, connection]);
+  }, [publicKey, connection, fetchPositions]);
 
   useEffect(() => {
     if (publicKey) loadVault();
@@ -65,46 +93,42 @@ export function useVault(): UseVaultReturn {
 
   const clearMessage = () => setTxMessage(null);
 
-  // ── Shared tx runner ─────────────────────────────────────────────────────
-  async function runTx(
-    label: string,
-    build: () => Transaction
-  ) {
+  // ── Actions — delegate to global transaction engine ──────────────────────
+  const handleInitVault = async () => {
     if (!publicKey) return;
-    setIsBusy(true);
-    setTxMessage({ type: "info", text: label });
-    try {
-      const tx = build();
-      tx.feePayer = publicKey;
-      const sig = await sendAndConfirm(connection, tx, sendTransaction);
-      setTxMessage({ type: "success", text: "Transaction confirmed", sig });
-      await loadVault();
-    } catch (e: any) {
-      console.error(e);
-      setTxMessage({ type: "error", text: e?.message ?? "Transaction failed" });
-    } finally {
-      setIsBusy(false);
-    }
-  }
-
-  // ── Actions ──────────────────────────────────────────────────────────────
-  const handleInitVault = () =>
-    runTx("Initializing vault…", () => {
-      const pda = deriveVaultPda(publicKey!);
-      return new Transaction().add(buildInitializeVaultIx(publicKey!, pda));
+    const pda = deriveVaultPda(publicKey);
+    await runTransaction({
+      label: "Initializing vault…",
+      buildTx: () => new Transaction().add(buildInitializeVaultIx(publicKey, pda)),
+      connection,
+      sendTransaction,
+      onSuccess: () => loadVault(),
     });
+  };
 
-  const handleRegisterDWallet = () =>
-    runTx("Registering BTC dWallet…", () => {
-      const pda = deriveVaultPda(publicKey!);
-      return new Transaction().add(buildRegisterDwalletIx(publicKey!, pda));
+  const handleRegisterDWallet = async () => {
+    if (!publicKey) return;
+    const pda = deriveVaultPda(publicKey);
+    await runTransaction({
+      label: "Registering BTC dWallet…",
+      buildTx: () => new Transaction().add(buildRegisterDwalletIx(publicKey, pda)),
+      connection,
+      sendTransaction,
+      onSuccess: () => loadVault(),
     });
+  };
 
-  const handleRecordDeposit = () =>
-    runTx("Recording deposit…", () => {
-      const pda = deriveVaultPda(publicKey!);
-      return new Transaction().add(buildRecordDepositIx(publicKey!, pda));
+  const handleRecordDeposit = async () => {
+    if (!publicKey) return;
+    const pda = deriveVaultPda(publicKey);
+    await runTransaction({
+      label: "Recording deposit…",
+      buildTx: () => new Transaction().add(buildRecordDepositIx(publicKey, pda)),
+      connection,
+      sendTransaction,
+      onSuccess: () => loadVault(),
     });
+  };
 
   return {
     vaultInfo,
