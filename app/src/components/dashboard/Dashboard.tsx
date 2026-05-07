@@ -24,14 +24,11 @@ export function Dashboard() {
   const { publicKey } = useWallet();
   const {
     vaultInfo,
-    txMessage,
     isBusy,
     vaultPda,
     loadVault,
-    clearMessage,
     handleInitVault,
     handleRegisterDWallet,
-    handleRecordDeposit,
   } = useVault();
 
   const isLoading = vaultInfo === "loading";
@@ -63,38 +60,6 @@ export function Dashboard() {
       onRefresh={loadVault}
       isRefreshing={isBusy && isLoading}
     >
-      {/* ── Tx Message Banner ────────────────────────────────────────────── */}
-      {txMessage && (
-        <div
-          className={cn(
-            "mb-6 flex items-start justify-between gap-3 rounded-xl border px-4 py-3 animate-fade-in",
-            txMessage.type === "success" && "border-vault-success/25 bg-vault-success-dim text-vault-success",
-            txMessage.type === "error"   && "border-vault-danger/25  bg-vault-danger-dim  text-vault-danger",
-            txMessage.type === "info"    && "border-vault-accent/25  bg-vault-accent-glow  text-vault-accent"
-          )}
-        >
-          <div className="flex-1 min-w-0">
-            <p className="text-body-sm font-medium">{txMessage.text}</p>
-            {txMessage.sig && (
-              <a
-                href={`https://explorer.solana.com/tx/${txMessage.sig}?cluster=devnet`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="mt-0.5 block font-mono text-body-xs opacity-70 underline underline-offset-2 hover:opacity-100 truncate"
-              >
-                {txMessage.sig}
-              </a>
-            )}
-          </div>
-          <button
-            onClick={clearMessage}
-            className="shrink-0 opacity-60 hover:opacity-100 text-body-xs transition-opacity mt-0.5"
-          >
-            ✕
-          </button>
-        </div>
-      )}
-
       {/* ── No Vault: Onboarding ─────────────────────────────────────────── */}
       {!isLoading && !hasVault && (
         <OnboardingCta onInit={handleInitVault} loading={isBusy} />
@@ -212,7 +177,12 @@ export function Dashboard() {
               <div className="flex flex-wrap items-center gap-3">
                 <Button
                   variant="secondary"
-                  onClick={handleRegisterDWallet}
+                  onClick={() => {
+                    // Generate a fresh random dWallet ID (BTC, chain=0, asset=0)
+                    const id = new Uint8Array(32);
+                    crypto.getRandomValues(id);
+                    handleRegisterDWallet(id, 0, 0);
+                  }}
                   loading={isBusy}
                   icon={<DWalletIcon />}
                 >
@@ -220,8 +190,7 @@ export function Dashboard() {
                 </Button>
                 <Button
                   variant="secondary"
-                  onClick={handleRecordDeposit}
-                  loading={isBusy}
+                  onClick={() => (window.location.href = "/collateral")}
                   disabled={vaultInfo!.numPositions === 0}
                   icon={<DepositIcon />}
                   title={
@@ -230,7 +199,7 @@ export function Dashboard() {
                       : undefined
                   }
                 >
-                  Simulate Deposit (1.5 BTC)
+                  Manage Collateral
                 </Button>
 
                 {/* Hint for step flow */}
@@ -238,7 +207,7 @@ export function Dashboard() {
                   <div className="flex items-center gap-2 rounded-lg border border-vault-accent/20 bg-vault-accent-glow px-3 py-1.5">
                     <InfoIcon />
                     <span className="text-body-xs text-vault-accent">
-                      Step 1: Register a dWallet → Step 2: Simulate a Deposit
+                      Step 1: Register a dWallet → Step 2: Manage Collateral
                     </span>
                   </div>
                 )}

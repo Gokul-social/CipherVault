@@ -5,6 +5,18 @@ import { AppLayout } from "../../layouts/AppLayout";
 import { SectionContainer } from "../../components/ui/SectionContainer";
 import { useThemeStore } from "../../hooks/useThemeStore";
 import { cn } from "../../lib/cn";
+import {
+  SOLANA_RPC_URL,
+  NETWORK_LABEL,
+  VAULT_PROGRAM_ID,
+  CORE_PROGRAM_ID,
+  DEFAULT_LTV_BPS,
+  DEFAULT_LIQ_THRESHOLD_BPS,
+} from "../../lib/config";
+
+// Full program IDs for display (resolved at import time)
+const VAULT_PROGRAM_ID_STR = VAULT_PROGRAM_ID.toBase58();
+const CORE_PROGRAM_ID_STR  = CORE_PROGRAM_ID.toBase58();
 
 export default function SettingsPage() {
   const { theme, toggleTheme, initTheme } = useThemeStore();
@@ -104,12 +116,14 @@ export default function SettingsPage() {
               <span className="text-body-sm text-vault-subtext">Cluster</span>
               <div className="flex items-center gap-2">
                 <span className="h-1.5 w-1.5 rounded-full bg-vault-success" />
-                <span className="font-mono text-body-sm text-vault-text">Devnet</span>
+                <span className="font-mono text-body-sm text-vault-text">{NETWORK_LABEL}</span>
               </div>
             </div>
             <div className="flex items-center justify-between">
               <span className="text-body-sm text-vault-subtext">RPC Endpoint</span>
-              <span className="font-mono text-body-xs text-vault-muted">api.devnet.solana.com</span>
+              <span className="font-mono text-body-xs text-vault-muted truncate max-w-[220px]" title={SOLANA_RPC_URL}>
+                {new URL(SOLANA_RPC_URL).hostname}
+              </span>
             </div>
             <div className="flex items-center justify-between">
               <span className="text-body-sm text-vault-subtext">Commitment</span>
@@ -117,7 +131,7 @@ export default function SettingsPage() {
             </div>
           </div>
           <p className="mt-2 text-body-xs text-vault-muted">
-            Network selection will be available in a future release.
+            Configure RPC via <span className="font-mono">NEXT_PUBLIC_SOLANA_RPC_URL</span> environment variable.
           </p>
         </SectionContainer>
 
@@ -126,15 +140,17 @@ export default function SettingsPage() {
           <div className="rounded-xl border border-vault-border bg-vault-surface p-4 space-y-3">
             {[
               { label: "Version",            value: "v0.1.0-alpha" },
-              { label: "Collateral Vault",   value: "4jJr...wBBm" },
-              { label: "CipherVault Core",   value: "8Voz...F8Ug" },
-              { label: "Max LTV",            value: "75%" },
-              { label: "Liquidation Threshold", value: "80%" },
+              { label: "Collateral Vault",   value: VAULT_PROGRAM_ID_STR },
+              { label: "CipherVault Core",   value: CORE_PROGRAM_ID_STR },
+              { label: "Max LTV",            value: `${DEFAULT_LTV_BPS / 100}%` },
+              { label: "Liquidation Threshold", value: `${DEFAULT_LIQ_THRESHOLD_BPS / 100}%` },
               { label: "Hackathon",          value: "Colosseum Frontier" },
             ].map(({ label, value }) => (
               <div key={label} className="flex items-center justify-between">
                 <span className="text-body-sm text-vault-subtext">{label}</span>
-                <span className="font-mono text-body-sm text-vault-text">{value}</span>
+                <span className="font-mono text-body-sm text-vault-text" title={value}>
+                  {value.length > 16 ? `${value.slice(0,4)}…${value.slice(-4)}` : value}
+                </span>
               </div>
             ))}
           </div>

@@ -1,24 +1,18 @@
 "use client";
 
 import { create } from "zustand";
-import { PublicKey, Connection, Transaction } from "@solana/web3.js";
+import { PublicKey, Connection } from "@solana/web3.js";
 import {
   VaultInfo,
   fetchVaultInfo,
   deriveVaultPda,
-  buildRecordDepositIx,
-  buildRecordWithdrawalIx,
-  DISC,
-  encodeU64LE,
-  VAULT_PROGRAM_ID,
 } from "../lib/vault";
-import { useTransactionStore } from "./useTransactionStore";
 
 // ── Types ──────────────────────────────────────────────────────────────────
 
 export interface CollateralPosition {
   index: number;
-  dwalletId: string;  // hex
+  dwalletId: string;  // 32-byte hex
   chain: number;
   asset: number;
   rawAmount: bigint;
@@ -26,11 +20,11 @@ export interface CollateralPosition {
   lastUpdatedSlot: bigint;
   chainLabel: string;
   assetLabel: string;
-  ltvContribution: number; // percentage 0-100
+  ltvContribution: number; // 0–100
 }
 
 interface CollateralStore {
-  // State
+  // On-chain state
   positions: CollateralPosition[];
   totalCollateralUsd: bigint;
   usedCreditUsd: bigint;
@@ -38,8 +32,12 @@ interface CollateralStore {
   liquidationThresholdBps: number;
   numPositions: number;
   isFrozen: boolean;
+  oracleAuthority: string | null; // base58 — gating oracle actions
+
+  // Status
   isLoading: boolean;
   vaultExists: boolean;
+  lastFetchedSlot: number | null;
 
   // Actions
   fetchPositions: (connection: Connection, owner: PublicKey) => Promise<void>;
@@ -49,6 +47,7 @@ interface CollateralStore {
   healthScore: () => number;
   availableCredit: () => bigint;
   isWithdrawalSafe: (positionIndex: number, withdrawAmount: bigint, usdPrice: bigint) => boolean;
+  isUserOracle: (walletAddress: string) => boolean;
 }
 
 // ── Chain/Asset Labels ────────────────────────────────────────────────────
@@ -70,6 +69,14 @@ const ASSET_LABELS: Record<number, string> = {
   6: "Gold",
 };
 
+// ── Binary layout offsets (mirrors lib/vault.ts OFFSETS) ──────────────────
+// [8 disc][32 owner][32 oracleAuthority][2 ltvBps][2 liqThreshold]
+// [8 totalCollateralUsd][8 usedCreditUsd][1 numPositions]
+// [256 dwalletIds 8×32][464 positions 8×58][1 isFrozen][1 bump]
+const POS_START = 8 + 32 + 32 + 2 + 2 + 8 + 8 + 1 + 256;
+const POS_SIZE  = 58; // dwalletId(32) + chain(1) + asset(1) + rawAmount(8) + usdValue(8) + lastUpdatedSlot(8)
+const FROZEN_OFFSET = POS_START + 464;
+
 // ── Store ──────────────────────────────────────────────────────────────────
 
 export const useCollateralStore = create<CollateralStore>((set, get) => ({
@@ -80,54 +87,55 @@ export const useCollateralStore = create<CollateralStore>((set, get) => ({
   liquidationThresholdBps: 0,
   numPositions: 0,
   isFrozen: false,
+  oracleAuthority: null,
   isLoading: true,
   vaultExists: false,
+  lastFetchedSlot: null,
 
   fetchPositions: async (connection, owner) => {
     set({ isLoading: true });
     try {
       const pda = deriveVaultPda(owner);
-      const info = await connection.getAccountInfo(pda);
+      const result = await connection.getAccountInfoAndContext(pda, "confirmed");
 
-      if (!info) {
-        set({ isLoading: false, vaultExists: false, positions: [] });
+      if (!result.value) {
+        set({ isLoading: false, vaultExists: false, positions: [], oracleAuthority: null });
         return;
       }
 
-      // Parse full vault account data including positions
-      const d = info.data;
-      let offset = 8; // discriminator
-      offset += 32;   // owner
-      offset += 32;   // oracleAuthority
-      const ltvBps = d.readUInt16LE(offset); offset += 2;
-      const liquidationThresholdBps = d.readUInt16LE(offset); offset += 2;
-      const totalCollateralUsd = d.readBigUInt64LE(offset); offset += 8;
-      const usedCreditUsd = d.readBigUInt64LE(offset); offset += 8;
-      const numPositions = d.readUInt8(offset); offset += 1;
+      const d = result.value.data;
+      const slot = result.context.slot;
 
-      // Parse dwalletIds (8 * 32 = 256 bytes)
-      const dwalletIds: string[] = [];
-      for (let i = 0; i < 8; i++) {
-        const id = d.subarray(offset, offset + 32);
-        dwalletIds.push(Buffer.from(id).toString("hex"));
-        offset += 32;
+      // Verify on-chain owner matches the requesting wallet
+      const onChainOwner = new PublicKey(d.subarray(8, 40));
+      if (!onChainOwner.equals(owner)) {
+        console.error("[fetchPositions] Owner mismatch — aborting");
+        set({ isLoading: false, vaultExists: false });
+        return;
       }
 
-      // Parse positions (8 * 58 = 464 bytes)
-      // CollateralPosition: dwalletId(32) + chain(1) + asset(1) + rawAmount(8) + usdValue(8) + lastUpdatedSlot(8) = 58
+      const oracleAuthority = new PublicKey(d.subarray(40, 72)).toBase58();
+      const ltvBps = d.readUInt16LE(72);
+      const liquidationThresholdBps = d.readUInt16LE(74);
+      const totalCollateralUsd = d.readBigUInt64LE(76);
+      const usedCreditUsd = d.readBigUInt64LE(84);
+      const numPositions = d.readUInt8(92);
+
+      // ── Parse active positions ───────────────────────────────────────────
       const positions: CollateralPosition[] = [];
       for (let i = 0; i < numPositions; i++) {
-        const posOffset = offset + i * 58;
-        const dwalletId = Buffer.from(d.subarray(posOffset, posOffset + 32)).toString("hex");
-        const chain = d.readUInt8(posOffset + 32);
-        const asset = d.readUInt8(posOffset + 33);
-        const rawAmount = d.readBigUInt64LE(posOffset + 34);
-        const usdValue = d.readBigUInt64LE(posOffset + 42);
-        const lastUpdatedSlot = d.readBigUInt64LE(posOffset + 50);
+        const base = POS_START + i * POS_SIZE;
+        const dwalletId = Buffer.from(d.subarray(base, base + 32)).toString("hex");
+        const chain     = d.readUInt8(base + 32);
+        const asset     = d.readUInt8(base + 33);
+        const rawAmount = d.readBigUInt64LE(base + 34);
+        const usdValue  = d.readBigUInt64LE(base + 42);
+        const lastUpdatedSlot = d.readBigUInt64LE(base + 50);
 
-        const ltvContribution = totalCollateralUsd > BigInt(0)
-          ? Number((usdValue * BigInt(100)) / totalCollateralUsd)
-          : 0;
+        const ltvContribution =
+          totalCollateralUsd > BigInt(0)
+            ? Number((usdValue * BigInt(100)) / totalCollateralUsd)
+            : 0;
 
         positions.push({
           index: i,
@@ -143,6 +151,9 @@ export const useCollateralStore = create<CollateralStore>((set, get) => ({
         });
       }
 
+      // ── FIX: Read isFrozen from correct offset ───────────────────────────
+      const isFrozen = d.length > FROZEN_OFFSET ? d.readUInt8(FROZEN_OFFSET) !== 0 : false;
+
       set({
         positions,
         totalCollateralUsd,
@@ -150,33 +161,39 @@ export const useCollateralStore = create<CollateralStore>((set, get) => ({
         ltvBps,
         liquidationThresholdBps,
         numPositions,
-        isFrozen: false, // parsed separately
+        isFrozen,
+        oracleAuthority,
         isLoading: false,
         vaultExists: true,
+        lastFetchedSlot: slot,
       });
     } catch (e) {
-      console.error("fetchPositions error:", e);
+      console.error("[fetchPositions] error:", e);
       set({ isLoading: false });
     }
   },
 
-  reset: () => set({
-    positions: [],
-    totalCollateralUsd: BigInt(0),
-    usedCreditUsd: BigInt(0),
-    ltvBps: 0,
-    numPositions: 0,
-    isLoading: true,
-    vaultExists: false,
-  }),
+  reset: () =>
+    set({
+      positions: [],
+      totalCollateralUsd: BigInt(0),
+      usedCreditUsd: BigInt(0),
+      ltvBps: 0,
+      liquidationThresholdBps: 0,
+      numPositions: 0,
+      isFrozen: false,
+      oracleAuthority: null,
+      isLoading: false,
+      vaultExists: false,
+      lastFetchedSlot: null,
+    }),
 
   healthScore: () => {
     const { totalCollateralUsd, usedCreditUsd, ltvBps } = get();
     if (usedCreditUsd === BigInt(0)) return 100;
     const currentLtv = (Number(usedCreditUsd) / Number(totalCollateralUsd)) * 100;
     const maxLtv = ltvBps / 100;
-    const score = Math.max(0, Math.min(100, 100 - (currentLtv / maxLtv) * 100));
-    return Math.round(score);
+    return Math.round(Math.max(0, Math.min(100, 100 - (currentLtv / maxLtv) * 100)));
   },
 
   availableCredit: () => {
@@ -190,17 +207,20 @@ export const useCollateralStore = create<CollateralStore>((set, get) => ({
     const { positions, totalCollateralUsd, usedCreditUsd, liquidationThresholdBps } = get();
     const pos = positions[positionIndex];
     if (!pos) return false;
-
     if (withdrawAmount > pos.rawAmount) return false;
 
-    // Project USD removal
     const usdRemoved = (withdrawAmount * usdPrice) / BigInt(1_000_000);
     const projectedTotal = totalCollateralUsd - usdRemoved;
 
     if (usedCreditUsd === BigInt(0)) return true;
 
-    // Check health: projected_total * 10000 / used_credit >= liquidation_threshold
+    // Health: projected_total * 10000 / used_credit >= liquidation_threshold_bps
     const projectedHealth = (projectedTotal * BigInt(10_000)) / usedCreditUsd;
     return projectedHealth >= BigInt(liquidationThresholdBps);
+  },
+
+  isUserOracle: (walletAddress) => {
+    const { oracleAuthority } = get();
+    return oracleAuthority !== null && oracleAuthority === walletAddress;
   },
 }));

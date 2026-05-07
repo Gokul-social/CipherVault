@@ -5,11 +5,10 @@ import {
   Transaction,
   TransactionInstruction,
 } from "@solana/web3.js";
+import { VAULT_PROGRAM_ID, DEFAULT_LTV_BPS, DEFAULT_LIQ_THRESHOLD_BPS } from "./config";
 
-// ── Program ID ────────────────────────────────────────────────────────────────
-export const VAULT_PROGRAM_ID = new PublicKey(
-  "4jJrbTHiAP5ocWhbUqJG6m1bQ6cRkNi7vJvHWpRABwBm"
-);
+// Re-export for consumers that previously imported from here
+export { VAULT_PROGRAM_ID };
 
 // ── Anchor discriminators (sha256("global:<name>")[0:8]) ──────────────────────
 export const DISC = {
@@ -22,9 +21,12 @@ export const DISC = {
 
 // ── Vault data shape ──────────────────────────────────────────────────────────
 export interface VaultInfo {
+  owner:              string;   // base58 — verified against connected wallet
+  oracleAuthority:    string;   // base58 — used to gate oracle actions
   totalCollateralUsd: bigint;
   usedCreditUsd:      bigint;
   ltvBps:             number;
+  liquidationThresholdBps: number;
   numPositions:       number;
   isFrozen:           boolean;
 }
@@ -51,6 +53,23 @@ export function encodeU64LE(v: bigint): Buffer {
   return b;
 }
 
+// ── Account layout offsets ────────────────────────────────────────────────────
+// [8 disc][32 owner][32 oracleAuthority][2 ltvBps][2 liqThreshold]
+// [8 totalCollateralUsd][8 usedCreditUsd][1 numPositions]
+// [256 dwalletIds][464 positions][1 isFrozen][1 bump]
+const OFFSETS = {
+  owner:              8,
+  oracleAuthority:    8 + 32,
+  ltvBps:             8 + 32 + 32,
+  liqThreshold:       8 + 32 + 32 + 2,
+  totalCollateralUsd: 8 + 32 + 32 + 2 + 2,
+  usedCreditUsd:      8 + 32 + 32 + 2 + 2 + 8,
+  numPositions:       8 + 32 + 32 + 2 + 2 + 8 + 8,
+  dwalletIds:         8 + 32 + 32 + 2 + 2 + 8 + 8 + 1,
+  positions:          8 + 32 + 32 + 2 + 2 + 8 + 8 + 1 + 256,
+  isFrozen:           8 + 32 + 32 + 2 + 2 + 8 + 8 + 1 + 256 + 464,
+} as const;
+
 // ── Fetch vault state ─────────────────────────────────────────────────────────
 export async function fetchVaultInfo(
   connection: Connection,
@@ -60,41 +79,57 @@ export async function fetchVaultInfo(
   const info = await connection.getAccountInfo(pda);
   if (!info) return null;
 
-  // Layout: [8 disc] owner(32) oracleAuthority(32) ltvBps(2) liqThreshold(2)
-  //         totalCollateralUsd(8) usedCreditUsd(8) numPositions(1)
-  //         dwalletIds(256) positions(464) isFrozen(1) bump(1)
   const d = info.data;
-  let offset = 8;   // skip discriminator
-  offset += 32;     // owner
-  offset += 32;     // oracleAuthority
-  const ltvBps             = d.readUInt16LE(offset); offset += 2;
-  offset += 2;              // liquidationThresholdBps
-  const totalCollateralUsd = d.readBigUInt64LE(offset); offset += 8;
-  const usedCreditUsd      = d.readBigUInt64LE(offset); offset += 8;
-  const numPositions       = d.readUInt8(offset);       offset += 1;
-  offset += 256;            // dwalletIds
-  offset += 464;            // positions
-  const isFrozen           = d.readUInt8(offset) !== 0;
 
-  return { totalCollateralUsd, usedCreditUsd, ltvBps, numPositions, isFrozen };
+  // Verify ownership — critical security check
+  const onChainOwner = new PublicKey(d.subarray(OFFSETS.owner, OFFSETS.owner + 32));
+  if (!onChainOwner.equals(owner)) {
+    console.error("[fetchVaultInfo] PDA owner mismatch — possible spoofing attempt");
+    return null;
+  }
+
+  const oracleAuthority = new PublicKey(
+    d.subarray(OFFSETS.oracleAuthority, OFFSETS.oracleAuthority + 32)
+  ).toBase58();
+
+  const ltvBps             = d.readUInt16LE(OFFSETS.ltvBps);
+  const liquidationThresholdBps = d.readUInt16LE(OFFSETS.liqThreshold);
+  const totalCollateralUsd = d.readBigUInt64LE(OFFSETS.totalCollateralUsd);
+  const usedCreditUsd      = d.readBigUInt64LE(OFFSETS.usedCreditUsd);
+  const numPositions       = d.readUInt8(OFFSETS.numPositions);
+  const isFrozen           = d.readUInt8(OFFSETS.isFrozen) !== 0;
+
+  return {
+    owner: onChainOwner.toBase58(),
+    oracleAuthority,
+    totalCollateralUsd,
+    usedCreditUsd,
+    ltvBps,
+    liquidationThresholdBps,
+    numPositions,
+    isFrozen,
+  };
 }
 
 // ── Build instructions ────────────────────────────────────────────────────────
+
 export function buildInitializeVaultIx(
   owner: PublicKey,
-  vaultPda: PublicKey
+  vaultPda: PublicKey,
+  ltvBps: number = DEFAULT_LTV_BPS,
+  liquidationThresholdBps: number = DEFAULT_LIQ_THRESHOLD_BPS
 ): TransactionInstruction {
   const data = Buffer.concat([
     DISC.initializeVault,
-    encodeU16LE(7500),
-    encodeU16LE(8000),
+    encodeU16LE(ltvBps),
+    encodeU16LE(liquidationThresholdBps),
   ]);
   return new TransactionInstruction({
     programId: VAULT_PROGRAM_ID,
     keys: [
-      { pubkey: vaultPda,             isSigner: false, isWritable: true  },
-      { pubkey: owner,                isSigner: true,  isWritable: true  },
-      { pubkey: owner,                isSigner: false, isWritable: false },
+      { pubkey: vaultPda,                isSigner: false, isWritable: true  },
+      { pubkey: owner,                   isSigner: true,  isWritable: true  },
+      { pubkey: owner,                   isSigner: false, isWritable: false }, // oracleAuthority = self
       { pubkey: SystemProgram.programId, isSigner: false, isWritable: false },
     ],
     data,
@@ -104,16 +139,18 @@ export function buildInitializeVaultIx(
 export function buildRegisterDwalletIx(
   owner: PublicKey,
   vaultPda: PublicKey,
-  chain: number = 0,
-  asset: number = 0
+  dwalletId: Uint8Array,
+  chain: number,
+  asset: number
 ): TransactionInstruction {
-  const dwalletId = Buffer.alloc(32);
-  owner.toBuffer().copy(dwalletId);
+  if (dwalletId.length !== 32) {
+    throw new Error(`dwalletId must be exactly 32 bytes, got ${dwalletId.length}`);
+  }
   const data = Buffer.concat([
     DISC.registerDwallet,
-    dwalletId,
-    Buffer.from([chain]), // chain: 0=BTC, 1=ETH, 2=SOL
-    Buffer.from([asset]), // asset: 0=BTC, 1=ETH, 2=SOL, ...
+    Buffer.from(dwalletId),
+    Buffer.from([chain]),
+    Buffer.from([asset]),
   ]);
   return new TransactionInstruction({
     programId: VAULT_PROGRAM_ID,
@@ -126,69 +163,71 @@ export function buildRegisterDwalletIx(
 }
 
 export function buildRecordDepositIx(
-  owner: PublicKey,
-  vaultPda: PublicKey
+  oracleAuthority: PublicKey,
+  vaultPda: PublicKey,
+  dwalletId: Uint8Array,
+  rawAmount: bigint,
+  usdPrice6dec: bigint
 ): TransactionInstruction {
-  const dwalletId = Buffer.alloc(32);
-  owner.toBuffer().copy(dwalletId);
+  if (dwalletId.length !== 32) {
+    throw new Error(`dwalletId must be exactly 32 bytes, got ${dwalletId.length}`);
+  }
+  if (rawAmount <= BigInt(0)) {
+    throw new Error("rawAmount must be greater than zero");
+  }
+  if (usdPrice6dec <= BigInt(0)) {
+    throw new Error("usdPrice6dec must be greater than zero");
+  }
+
   const data = Buffer.concat([
     DISC.recordDeposit,
-    dwalletId,
-    encodeU64LE(BigInt(150_000_000)),    // 1.5 BTC in sats
-    encodeU64LE(BigInt(65_000_000_000)), // $65,000.000000
-  ]);
-  return new TransactionInstruction({
-    programId: VAULT_PROGRAM_ID,
-    keys: [
-      { pubkey: vaultPda, isSigner: false, isWritable: true  },
-      // oracle_authority: must match vault.oracle_authority (set to owner at init)
-      { pubkey: owner,    isSigner: true,  isWritable: false },
-    ],
-    data,
-  });
-}
-
-/**
- * Builds a record_withdrawal instruction.
- * record_withdrawal: [disc(8) + dwalletId(32) + rawAmount(8) + usdPrice6dec(8)]
- *
- * Account layout (must match RecordWithdrawal context in lib.rs):
- *   0. vault         — writable, PDA
- *   1. oracle_authority — signer (== owner, set at vault init)
- */
-export function buildRecordWithdrawalIx(
-  owner: PublicKey,
-  vaultPda: PublicKey,
-  dwalletId?: Buffer,
-  rawAmount: bigint = BigInt(50_000_000),
-  usdPrice6dec: bigint = BigInt(65_000_000_000)
-): TransactionInstruction {
-  const dwId = dwalletId ?? (() => {
-    const b = Buffer.alloc(32);
-    owner.toBuffer().copy(b);
-    return b;
-  })();
-  const data = Buffer.concat([
-    DISC.recordWithdrawal,
-    dwId,
+    Buffer.from(dwalletId),
     encodeU64LE(rawAmount),
     encodeU64LE(usdPrice6dec),
   ]);
   return new TransactionInstruction({
     programId: VAULT_PROGRAM_ID,
     keys: [
-      { pubkey: vaultPda, isSigner: false, isWritable: true },
-      // oracle_authority: must match vault.oracle_authority (set to owner at vault initialization)
-      { pubkey: owner,    isSigner: true,  isWritable: false },
+      { pubkey: vaultPda,         isSigner: false, isWritable: true  },
+      { pubkey: oracleAuthority,  isSigner: true,  isWritable: false },
     ],
     data,
   });
 }
 
-/**
- * Builds an update_credit instruction.
- * update_credit: [disc(8) + newUsedCreditUsd(8)]
- */
+export function buildRecordWithdrawalIx(
+  oracleAuthority: PublicKey,
+  vaultPda: PublicKey,
+  dwalletId: Uint8Array,
+  rawAmount: bigint,
+  usdPrice6dec: bigint
+): TransactionInstruction {
+  if (dwalletId.length !== 32) {
+    throw new Error(`dwalletId must be exactly 32 bytes, got ${dwalletId.length}`);
+  }
+  if (rawAmount <= BigInt(0)) {
+    throw new Error("rawAmount must be greater than zero");
+  }
+  if (usdPrice6dec <= BigInt(0)) {
+    throw new Error("usdPrice6dec must be greater than zero");
+  }
+
+  const data = Buffer.concat([
+    DISC.recordWithdrawal,
+    Buffer.from(dwalletId),
+    encodeU64LE(rawAmount),
+    encodeU64LE(usdPrice6dec),
+  ]);
+  return new TransactionInstruction({
+    programId: VAULT_PROGRAM_ID,
+    keys: [
+      { pubkey: vaultPda,        isSigner: false, isWritable: true  },
+      { pubkey: oracleAuthority, isSigner: true,  isWritable: false },
+    ],
+    data,
+  });
+}
+
 export function buildUpdateCreditIx(
   owner: PublicKey,
   vaultPda: PublicKey,
@@ -206,15 +245,4 @@ export function buildUpdateCreditIx(
     ],
     data,
   });
-}
-
-export async function sendAndConfirm(
-  connection: Connection,
-  tx: Transaction,
-  sendTransaction: (tx: Transaction, connection: Connection) => Promise<string>
-): Promise<string> {
-  tx.recentBlockhash = (await connection.getLatestBlockhash()).blockhash;
-  const sig = await sendTransaction(tx, connection);
-  await connection.confirmTransaction(sig, "confirmed");
-  return sig;
 }

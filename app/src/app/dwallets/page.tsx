@@ -13,15 +13,33 @@ import { useCollateralStore } from "../../hooks/useCollateralStore";
 import { useTransactionStore } from "../../hooks/useTransactionStore";
 import { useHistoryStore } from "../../hooks/useHistoryStore";
 import { deriveVaultPda, buildRegisterDwalletIx } from "../../lib/vault";
+import { IKA_ENABLED } from "../../lib/config";
 import { shortenAddress } from "../../lib/format";
 import { cn } from "../../lib/cn";
 
 // Chain → on-chain chain/asset enum mapping
-const CHAIN_ASSET_MAP: Record<number, { chain: number; asset: number }> = {
-  0: { chain: 0, asset: 0 }, // Bitcoin → BTC
-  1: { chain: 1, asset: 1 }, // Ethereum → ETH
-  2: { chain: 2, asset: 2 }, // Solana → SOL
+const CHAIN_ASSET_MAP: Record<number, { chain: number; asset: number; label: string }> = {
+  0: { chain: 0, asset: 0, label: "Bitcoin"  },
+  1: { chain: 1, asset: 1, label: "Ethereum" },
+  2: { chain: 2, asset: 2, label: "Solana"   },
 };
+
+/**
+ * Generates a cryptographically random 32-byte dWallet ID.
+ *
+ * When IKA_ENABLED=false (default for devnet demo):
+ *   Uses crypto.getRandomValues — produces a real random ID that is registered
+ *   on-chain. The on-chain state is valid even without a real Ika DKG round.
+ *
+ * When IKA_ENABLED=true:
+ *   Would call the Ika SDK DKG flow (not yet available in pre-alpha).
+ *   The random fallback below is never used in that path.
+ */
+function generateDwalletId(): Uint8Array {
+  const id = new Uint8Array(32);
+  crypto.getRandomValues(id);
+  return id;
+}
 
 export default function DWalletsPage() {
   const { publicKey, sendTransaction } = useWallet();
@@ -31,44 +49,54 @@ export default function DWalletsPage() {
   const addHistoryEntry = useHistoryStore((s) => s.addEntry);
 
   const [selectedChain, setSelectedChain] = useState(0); // 0=BTC, 1=ETH, 2=SOL
+  const [isRegistering, setIsRegistering] = useState(false);
 
   const loadData = useCallback(async () => {
     if (!publicKey) return;
     await store.fetchPositions(connection, publicKey);
   }, [publicKey, connection]);
 
-  useEffect(() => {
-    loadData();
-  }, [loadData]);
+  useEffect(() => { loadData(); }, [loadData]);
 
   const handleRegister = async () => {
     if (!publicKey) return;
     const vaultPda = deriveVaultPda(publicKey);
-    const { chain, asset } = CHAIN_ASSET_MAP[selectedChain] ?? { chain: 0, asset: 0 };
+    const { chain, asset, label } = CHAIN_ASSET_MAP[selectedChain] ?? CHAIN_ASSET_MAP[0];
+
+    setIsRegistering(true);
+
+    // Generate a real random 32-byte dWallet ID.
+    // This is NOT the user's Solana public key — it is a fresh random identifier
+    // that semantically represents the Ika dWallet custody slot.
+    const dwalletId = generateDwalletId();
 
     await runTransaction({
-      label: `Register ${CHAINS[selectedChain].label} dWallet`,
+      label: `Register ${label} dWallet`,
       buildTx: () => {
-        const ix = buildRegisterDwalletIx(publicKey, vaultPda, chain, asset);
+        const ix = buildRegisterDwalletIx(publicKey, vaultPda, dwalletId, chain, asset);
         const tx = new Transaction().add(ix);
         tx.feePayer = publicKey;
         return tx;
       },
       connection,
       sendTransaction,
-      onSuccess: () => {
+      onSuccess: (sig) => {
         addHistoryEntry({
           id: `register-${Date.now()}`,
-          type: "deposit",
-          description: `Registered ${CHAINS[selectedChain].label} dWallet`,
+          type: "register_dwallet",
+          description: `Registered ${label} dWallet`,
           amount: "—",
           status: "confirmed",
           timestamp: Date.now(),
-          chain: CHAINS[selectedChain].label,
+          txSig: sig,
+          chain: label,
         });
         loadData();
+        setIsRegistering(false);
       },
     });
+
+    setIsRegistering(false);
   };
 
   if (!publicKey) {
@@ -97,12 +125,19 @@ export default function DWalletsPage() {
           icon={<VaultIcon />}
           title="No Vault Found"
           description="Initialize a vault from the Dashboard before registering dWallets."
-          action={{ label: "Go to Dashboard", onClick: () => window.location.href = "/" }}
+          action={{ label: "Go to Dashboard", onClick: () => (window.location.href = "/") }}
         />
       ) : (
         <div className="space-y-8">
           {/* Register New dWallet */}
-          <SectionContainer title="Register dWallet" subtitle="Create an Ika MPC wallet for cross-chain custody">
+          <SectionContainer
+            title="Register dWallet"
+            subtitle={
+              IKA_ENABLED
+                ? "Create an Ika MPC dWallet for cross-chain custody"
+                : "Register a custody slot (random ID — Ika DKG pending pre-alpha)"
+            }
+          >
             <div className="rounded-xl border border-vault-border bg-vault-surface p-5">
               <div className="flex items-end gap-4">
                 {/* Chain Selector */}
@@ -134,6 +169,7 @@ export default function DWalletsPage() {
                   variant="primary"
                   onClick={handleRegister}
                   disabled={numPositions >= 8}
+                  loading={isRegistering}
                   icon={<PlusIcon />}
                 >
                   Register dWallet
@@ -190,9 +226,9 @@ export default function DWalletsPage() {
 // ── Constants ─────────────────────────────────────────────────────────────
 
 const CHAINS = [
-  { id: 0, label: "Bitcoin", dotColor: "bg-[#F7931A]" },
+  { id: 0, label: "Bitcoin",  dotColor: "bg-[#F7931A]" },
   { id: 1, label: "Ethereum", dotColor: "bg-[#627EEA]" },
-  { id: 2, label: "Solana", dotColor: "bg-[#9945FF]" },
+  { id: 2, label: "Solana",   dotColor: "bg-[#9945FF]" },
 ];
 
 // ── Icons ──────────────────────────────────────────────────────────────────

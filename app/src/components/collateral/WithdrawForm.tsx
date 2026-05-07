@@ -4,15 +4,16 @@ import React, { useState } from "react";
 import { cn } from "../../lib/cn";
 import { Button } from "../ui/Button";
 import { ConfirmModal } from "../ui/ConfirmModal";
-import { formatUsd } from "../../lib/format";
+import { usePriceFeed, priceToU64, PriceFeedAsset } from "../../hooks/usePriceFeed";
 
 interface WithdrawFormProps {
-  onWithdraw: (amount: bigint, usdPrice: bigint) => Promise<void>;
+  onWithdraw: (rawAmount: bigint, usdPrice: bigint) => Promise<void>;
   isBusy: boolean;
   currentRawAmount: bigint;
   currentUsdValue: bigint;
-  isWithdrawalSafe: (amount: bigint, usdPrice: bigint) => boolean;
+  isWithdrawalSafe: (rawAmount: bigint, usdPrice: bigint) => boolean;
   assetLabel: string;
+  asset?: PriceFeedAsset;
 }
 
 export function WithdrawForm({
@@ -22,38 +23,45 @@ export function WithdrawForm({
   currentUsdValue,
   isWithdrawalSafe,
   assetLabel,
+  asset = "BTC",
 }: WithdrawFormProps) {
-  const [amount, setAmount] = useState("");
-  const [usdPrice, setUsdPrice] = useState("65000");
-  const [error, setError] = useState("");
+  const [amount, setAmount]         = useState("");
+  const [error, setError]           = useState("");
   const [showConfirm, setShowConfirm] = useState(false);
+
+  // Asset-specific decimal precision
+  const DECIMALS: Record<PriceFeedAsset, number> = { BTC: 8, ETH: 9, SOL: 9 };
+  const DECIMAL_FACTOR = Math.pow(10, DECIMALS[asset]);
+
+  // Live oracle price — replaces hardcoded $65,000
+  const { price, isLoading: priceLoading, isStale, error: priceError } = usePriceFeed(asset);
+
+  const currentAmountDisplay = (Number(currentRawAmount) / DECIMAL_FACTOR).toFixed(DECIMALS[asset]);
 
   const validate = (): boolean => {
     setError("");
     const amountNum = parseFloat(amount);
-    const priceNum = parseFloat(usdPrice);
 
     if (!amount || isNaN(amountNum) || amountNum <= 0) {
       setError("Amount must be greater than 0");
       return false;
     }
-    if (!usdPrice || isNaN(priceNum) || priceNum <= 0) {
-      setError("USD price must be greater than 0");
+    if (!price || isStale) {
+      setError("Price feed unavailable or stale — cannot record withdrawal");
       return false;
     }
 
-    const rawAmount = BigInt(Math.floor(amountNum * 100_000_000));
+    const rawAmount   = BigInt(Math.floor(amountNum * DECIMAL_FACTOR));
+    const rawUsdPrice = priceToU64(price);
+
     if (rawAmount > currentRawAmount) {
-      setError(`Insufficient balance. Max: ${Number(currentRawAmount) / 100_000_000}`);
+      setError(`Insufficient balance. Max: ${currentAmountDisplay} ${assetLabel}`);
       return false;
     }
-
-    const rawUsdPrice = BigInt(Math.floor(priceNum * 1_000_000));
     if (!isWithdrawalSafe(rawAmount, rawUsdPrice)) {
       setError("Withdrawal would breach liquidation threshold. Reduce amount or repay credit first.");
       return false;
     }
-
     return true;
   };
 
@@ -63,22 +71,21 @@ export function WithdrawForm({
   };
 
   const handleConfirm = async () => {
+    if (!price) return;
     setShowConfirm(false);
-    const rawAmount = BigInt(Math.floor(parseFloat(amount) * 100_000_000));
-    const rawUsdPrice = BigInt(Math.floor(parseFloat(usdPrice) * 1_000_000));
+    const rawAmount   = BigInt(Math.floor(parseFloat(amount) * DECIMAL_FACTOR));
+    const rawUsdPrice = priceToU64(price);
     await onWithdraw(rawAmount, rawUsdPrice);
     setAmount("");
   };
 
   const amountNum = parseFloat(amount) || 0;
-  const priceNum = parseFloat(usdPrice) || 0;
-  const withdrawUsd = amountNum * priceNum;
-  const remainingRaw = Math.max(0, Number(currentRawAmount) / 100_000_000 - amountNum);
+  const withdrawUsd = price ? amountNum * price : 0;
+  const remainingDisplay = Math.max(0, Number(currentRawAmount) / DECIMAL_FACTOR - amountNum).toFixed(8);
 
-  // Safety check for preview
-  const rawAmountPreview = BigInt(Math.floor(amountNum * 100_000_000));
-  const rawPricePreview = BigInt(Math.floor(priceNum * 1_000_000));
-  const isSafe = amountNum > 0 && priceNum > 0
+  const rawAmountPreview = BigInt(Math.floor(amountNum * DECIMAL_FACTOR));
+  const rawPricePreview  = price ? priceToU64(price) : BigInt(0);
+  const isSafe = amountNum > 0 && price && !isStale
     ? isWithdrawalSafe(rawAmountPreview, rawPricePreview)
     : true;
 
@@ -90,75 +97,63 @@ export function WithdrawForm({
           Withdraw Collateral
         </h3>
 
-        <div className="grid grid-cols-2 gap-4">
-          {/* Amount Input */}
-          <div>
-            <label className="text-label-md uppercase tracking-widest text-vault-muted mb-1.5 block">
-              Amount ({assetLabel})
-            </label>
-            <input
-              type="number"
-              step="0.00000001"
-              min="0"
-              value={amount}
-              onChange={(e) => setAmount(e.target.value)}
-              placeholder="0.00"
-              disabled={isBusy}
-              className={cn(
-                "w-full rounded-lg border bg-vault-elevated px-3 py-2",
-                "font-mono text-body-sm text-vault-text placeholder:text-vault-muted",
-                "focus:outline-none focus:ring-2 focus:ring-vault-accent/40",
-                "transition-all duration-150",
-                "disabled:opacity-50 disabled:cursor-not-allowed",
-                !isSafe && amountNum > 0
-                  ? "border-vault-danger/50 focus:ring-vault-danger/40"
-                  : "border-vault-border focus:border-vault-accent"
-              )}
-            />
-            <div className="mt-1 flex justify-between">
-              <span className="text-label-sm text-vault-muted">
-                Available: {(Number(currentRawAmount) / 100_000_000).toFixed(8)}
-              </span>
-              <button
-                onClick={() => setAmount((Number(currentRawAmount) / 100_000_000).toString())}
-                className="text-label-sm text-vault-accent hover:underline"
-              >
-                Max
-              </button>
-            </div>
-          </div>
-
-          {/* USD Price */}
-          <div>
-            <label className="text-label-md uppercase tracking-widest text-vault-muted mb-1.5 block">
-              USD Price
-            </label>
-            <input
-              type="number"
-              step="0.01"
-              min="0"
-              value={usdPrice}
-              onChange={(e) => setUsdPrice(e.target.value)}
-              placeholder="65000"
-              disabled={isBusy}
-              className={cn(
-                "w-full rounded-lg border border-vault-border bg-vault-elevated px-3 py-2",
-                "font-mono text-body-sm text-vault-text placeholder:text-vault-muted",
-                "focus:outline-none focus:ring-2 focus:ring-vault-accent/40 focus:border-vault-accent",
-                "transition-all duration-150",
-                "disabled:opacity-50 disabled:cursor-not-allowed"
-              )}
-            />
+        {/* Amount Input */}
+        <div>
+          <label className="text-label-md uppercase tracking-widest text-vault-muted mb-1.5 block">
+            Amount ({assetLabel})
+          </label>
+          <input
+            type="number"
+            step={asset === "BTC" ? "0.00000001" : "0.000000001"}
+            min="0"
+            value={amount}
+            onChange={(e) => setAmount(e.target.value)}
+            placeholder="0.00"
+            disabled={isBusy}
+            className={cn(
+              "w-full rounded-lg border bg-vault-elevated px-3 py-2",
+              "font-mono text-body-sm text-vault-text placeholder:text-vault-muted",
+              "focus:outline-none focus:ring-2 focus:ring-vault-accent/40",
+              "transition-all duration-150",
+              "disabled:opacity-50 disabled:cursor-not-allowed",
+              !isSafe && amountNum > 0
+                ? "border-vault-danger/50 focus:ring-vault-danger/40"
+                : "border-vault-border focus:border-vault-accent"
+            )}
+          />
+          <div className="mt-1 flex justify-between">
+            <span className="text-label-sm text-vault-muted">
+              Available: {currentAmountDisplay} {assetLabel}
+            </span>
+            <button
+              onClick={() => setAmount(currentAmountDisplay)}
+              className="text-label-sm text-vault-accent hover:underline"
+            >
+              Max
+            </button>
           </div>
         </div>
 
+        {/* Oracle Price */}
+        <div className="mt-3 flex items-center justify-between rounded-lg bg-vault-elevated px-3 py-2 border border-vault-border-subtle">
+          <span className="text-body-xs text-vault-muted">Oracle Price ({asset}/USD):</span>
+          {priceLoading ? (
+            <span className="text-label-sm text-vault-muted animate-pulse">Fetching…</span>
+          ) : priceError || !price ? (
+            <span className="text-label-sm text-vault-danger">Unavailable</span>
+          ) : (
+            <span className={cn("font-mono text-body-sm font-medium", isStale ? "text-vault-warning" : "text-vault-text")}>
+              ${price.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+              {isStale && <span className="ml-1 text-label-sm text-vault-warning">(stale)</span>}
+            </span>
+          )}
+        </div>
+
         {/* Preview */}
-        {amountNum > 0 && (
+        {amountNum > 0 && price && (
           <div className={cn(
             "mt-3 flex items-center justify-between rounded-lg px-3 py-2 border",
-            isSafe
-              ? "bg-vault-elevated border-vault-border-subtle"
-              : "bg-vault-danger-dim border-vault-danger/20"
+            isSafe ? "bg-vault-elevated border-vault-border-subtle" : "bg-vault-danger-dim border-vault-danger/20"
           )}>
             <div>
               <span className="text-body-xs text-vault-muted">Withdraw Value: </span>
@@ -166,14 +161,9 @@ export function WithdrawForm({
                 ${withdrawUsd.toLocaleString(undefined, { minimumFractionDigits: 2 })}
               </span>
             </div>
-            <div className="flex items-center gap-2">
-              <span className={cn(
-                "text-label-sm font-medium",
-                isSafe ? "text-vault-success" : "text-vault-danger"
-              )}>
-                {isSafe ? "✓ Safe" : "⚠ Unsafe"}
-              </span>
-            </div>
+            <span className={cn("text-label-sm font-medium", isSafe ? "text-vault-success" : "text-vault-danger")}>
+              {isSafe ? "✓ Safe" : "⚠ Unsafe"}
+            </span>
           </div>
         )}
 
@@ -194,7 +184,7 @@ export function WithdrawForm({
             variant="danger"
             onClick={handleSubmit}
             loading={isBusy}
-            disabled={currentRawAmount === BigInt(0)}
+            disabled={currentRawAmount === BigInt(0) || !price || isStale}
             icon={<WithdrawIcon />}
           >
             Withdraw
@@ -202,13 +192,12 @@ export function WithdrawForm({
         </div>
       </div>
 
-      {/* Confirmation Modal */}
       <ConfirmModal
         isOpen={showConfirm}
         onClose={() => setShowConfirm(false)}
         onConfirm={handleConfirm}
         title="Confirm Withdrawal"
-        description={`You are about to withdraw ${amount} ${assetLabel} (~$${withdrawUsd.toLocaleString()}). Remaining balance will be ${remainingRaw.toFixed(8)} ${assetLabel}.`}
+        description={`You are about to withdraw ${amount} ${assetLabel} (~$${withdrawUsd.toLocaleString()}). Remaining balance will be ${remainingDisplay} ${assetLabel}.`}
         confirmLabel="Withdraw"
         variant="warning"
         loading={isBusy}

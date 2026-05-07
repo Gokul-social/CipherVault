@@ -1,8 +1,16 @@
 "use client";
 
 import { create } from "zustand";
-import { PublicKey, Connection, Transaction, TransactionInstruction, SystemProgram } from "@solana/web3.js";
-import { useTransactionStore } from "./useTransactionStore";
+import {
+  PublicKey,
+  Connection,
+  Transaction,
+  TransactionInstruction,
+  SystemProgram,
+} from "@solana/web3.js";
+import { CORE_PROGRAM_ID, ENCRYPT_ENABLED } from "../lib/config";
+
+export { CORE_PROGRAM_ID };
 
 // ── Types ──────────────────────────────────────────────────────────────────
 
@@ -11,8 +19,12 @@ export type OrderDirection = "long" | "short";
 export interface OrderEntry {
   orderId: number;
   direction: OrderDirection;
-  encryptedSize: string; // hex preview
-  encryptedPrice: string; // hex preview
+  /**
+   * When ENCRYPT_ENABLED=true: FHE ciphertext hex from Encrypt SDK.
+   * When ENCRYPT_ENABLED=false: hex of plaintext u64 (plaintext on-chain order).
+   */
+  encryptedSize: string;
+  encryptedPrice: string;
   timestamp: number;
   isFilled: boolean;
   isCancelled: boolean;
@@ -33,57 +45,51 @@ interface OrderStore {
   orders: OrderEntry[];
   settlements: SettlementEntry[];
   isPlacing: boolean;
-  isLoading: boolean;
+  nextOrderIndex: number;
 
   // Actions
   addOrder: (order: OrderEntry) => void;
   addSettlement: (settlement: SettlementEntry) => void;
   setPlacing: (v: boolean) => void;
+  incrementOrderIndex: () => void;
   reset: () => void;
 }
 
-// ── Core Program Constants ────────────────────────────────────────────────
-
-export const CORE_PROGRAM_ID = new PublicKey(
-  "8Voz2Petb9Q4xYMCqjNVXSyTzkmzMsK3cTrSVGGLF8Ug"
-);
-
-// Anchor discriminators for ciphervault-core
+// ── Anchor discriminators for ciphervault-core ─────────────────────────────
+// Verified: sha256("global:<name>")[0:8]
 export const CORE_DISC = {
-  // sha256("global:place_order")[0:8]
-  placeOrder: Buffer.from([51, 194, 155, 175, 124, 234, 252, 175]),
-  // sha256("global:settle_trade")[0:8]
-  settleTrade: Buffer.from([174, 80, 13, 113, 231, 97, 11, 173]),
-  // sha256("global:deposit_collateral")[0:8]
-  depositCollateral: Buffer.from([131, 178, 143, 117, 64, 235, 115, 213]),
-  // sha256("global:withdraw_collateral")[0:8]
-  withdrawCollateral: Buffer.from([115, 135, 168, 106, 235, 245, 157, 39]),
-};
+  placeOrder:          Buffer.from([51, 194, 155, 175, 124, 234, 252, 175]),
+  settleTrade:         Buffer.from([174, 80, 13, 113, 231, 97, 11, 173]),
+  depositCollateral:   Buffer.from([131, 178, 143, 117, 64, 235, 115, 213]),
+  withdrawCollateral:  Buffer.from([115, 135, 168, 106, 235, 245, 157, 39]),
+} as const;
 
 // ── Store ──────────────────────────────────────────────────────────────────
 
-export const useOrderStore = create<OrderStore>((set, get) => ({
+export const useOrderStore = create<OrderStore>((set) => ({
   orders: [],
   settlements: [],
   isPlacing: false,
-  isLoading: false,
+  nextOrderIndex: 0,
 
-  addOrder: (order) => {
-    set((s) => ({ orders: [order, ...s.orders] }));
-  },
+  addOrder: (order) =>
+    set((s) => ({ orders: [order, ...s.orders] })),
 
-  addSettlement: (settlement) => {
-    set((s) => ({ settlements: [settlement, ...s.settlements] }));
-  },
+  addSettlement: (settlement) =>
+    set((s) => ({ settlements: [settlement, ...s.settlements] })),
 
   setPlacing: (v) => set({ isPlacing: v }),
 
-  reset: () => set({ orders: [], settlements: [], isPlacing: false }),
+  incrementOrderIndex: () =>
+    set((s) => ({ nextOrderIndex: s.nextOrderIndex + 1 })),
+
+  reset: () =>
+    set({ orders: [], settlements: [], isPlacing: false, nextOrderIndex: 0 }),
 }));
 
-// ── Instruction Builders ──────────────────────────────────────────────────
+// ── PDA Derivation ────────────────────────────────────────────────────────
 
-function deriveProtocolPda(): PublicKey {
+export function deriveProtocolPda(): PublicKey {
   const [pda] = PublicKey.findProgramAddressSync(
     [Buffer.from("protocol")],
     CORE_PROGRAM_ID
@@ -91,7 +97,7 @@ function deriveProtocolPda(): PublicKey {
   return pda;
 }
 
-function deriveOrderPda(trader: PublicKey, orderIndex: bigint): PublicKey {
+export function deriveOrderPda(trader: PublicKey, orderIndex: bigint): PublicKey {
   const buf = Buffer.alloc(8);
   buf.writeBigUInt64LE(orderIndex, 0);
   const [pda] = PublicKey.findProgramAddressSync(
@@ -101,9 +107,17 @@ function deriveOrderPda(trader: PublicKey, orderIndex: bigint): PublicKey {
   return pda;
 }
 
+// ── Instruction Builders ──────────────────────────────────────────────────
+
 /**
  * Builds a place_order instruction for the ciphervault-core program.
- * Encodes: [disc(8) | size_len(4) | size_data(N) | price_len(4) | price_data(M) | direction(1)]
+ *
+ * When ENCRYPT_ENABLED=false: encryptedSize/encryptedPrice contain plaintext
+ * u64 values serialised as little-endian 8-byte buffers. This is still a real
+ * on-chain transaction — orders are stored on-chain, just not privacy-preserving.
+ *
+ * When ENCRYPT_ENABLED=true: encryptedSize/encryptedPrice are real FHE
+ * ciphertexts from the Encrypt SDK.
  */
 export function buildPlaceOrderIx(
   trader: PublicKey,
@@ -111,9 +125,9 @@ export function buildPlaceOrderIx(
   orderPda: PublicKey,
   encryptedSize: Buffer,
   encryptedPrice: Buffer,
-  direction: number // 0 = Long, 1 = Short
+  direction: 0 | 1   // 0 = Long, 1 = Short
 ): TransactionInstruction {
-  // Borsh encoding: Vec<u8> is encoded as [u32 length | bytes], then direction as u8
+  // Borsh Vec<u8>: [u32 length LE | bytes]
   const sizeLen = Buffer.alloc(4);
   sizeLen.writeUInt32LE(encryptedSize.length, 0);
   const priceLen = Buffer.alloc(4);
@@ -132,8 +146,8 @@ export function buildPlaceOrderIx(
     programId: CORE_PROGRAM_ID,
     keys: [
       { pubkey: protocolPda, isSigner: false, isWritable: true },
-      { pubkey: orderPda, isSigner: false, isWritable: true },
-      { pubkey: trader, isSigner: true, isWritable: true },
+      { pubkey: orderPda,    isSigner: false, isWritable: true },
+      { pubkey: trader,      isSigner: true,  isWritable: true },
       { pubkey: SystemProgram.programId, isSigner: false, isWritable: false },
     ],
     data,
@@ -141,65 +155,18 @@ export function buildPlaceOrderIx(
 }
 
 /**
- * Builds a deposit_collateral instruction for the ciphervault-core program.
+ * Encodes plaintext size and price as 8-byte LE buffers.
+ * Used when ENCRYPT_ENABLED=false. These are the real values stored on-chain.
  */
-export function buildCoreDepositCollateralIx(
-  trader: PublicKey,
-  protocolPda: PublicKey,
-  collateralVaultPda: PublicKey,
-  chainAsset: number,
-  amount: bigint,
-  dwalletId: Buffer
-): TransactionInstruction {
-  const amountBuf = Buffer.alloc(8);
-  amountBuf.writeBigUInt64LE(amount, 0);
+export function encodePlaintextOrder(
+  size: bigint,
+  price: bigint
+): { encryptedSize: Buffer; encryptedPrice: Buffer } {
+  const encryptedSize = Buffer.alloc(8);
+  encryptedSize.writeBigUInt64LE(size, 0);
 
-  const data = Buffer.concat([
-    CORE_DISC.depositCollateral,
-    Buffer.from([chainAsset]),
-    amountBuf,
-    dwalletId,
-  ]);
+  const encryptedPrice = Buffer.alloc(8);
+  encryptedPrice.writeBigUInt64LE(price, 0);
 
-  return new TransactionInstruction({
-    programId: CORE_PROGRAM_ID,
-    keys: [
-      { pubkey: protocolPda, isSigner: false, isWritable: true },
-      { pubkey: collateralVaultPda, isSigner: false, isWritable: true },
-      { pubkey: trader, isSigner: true, isWritable: true },
-      { pubkey: SystemProgram.programId, isSigner: false, isWritable: false },
-    ],
-    data,
-  });
+  return { encryptedSize, encryptedPrice };
 }
-
-/**
- * Builds a withdraw_collateral instruction for the ciphervault-core program.
- */
-export function buildCoreWithdrawCollateralIx(
-  trader: PublicKey,
-  protocolPda: PublicKey,
-  collateralVaultPda: PublicKey,
-  amount: bigint
-): TransactionInstruction {
-  const amountBuf = Buffer.alloc(8);
-  amountBuf.writeBigUInt64LE(amount, 0);
-
-  const data = Buffer.concat([
-    CORE_DISC.withdrawCollateral,
-    amountBuf,
-  ]);
-
-  return new TransactionInstruction({
-    programId: CORE_PROGRAM_ID,
-    keys: [
-      { pubkey: protocolPda, isSigner: false, isWritable: true },
-      { pubkey: collateralVaultPda, isSigner: false, isWritable: true },
-      { pubkey: trader, isSigner: true, isWritable: true },
-    ],
-    data,
-  });
-}
-
-// Export PDA derivers for consumers
-export { deriveProtocolPda, deriveOrderPda };

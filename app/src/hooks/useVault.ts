@@ -9,58 +9,48 @@ import {
   deriveVaultPda,
   buildInitializeVaultIx,
   buildRegisterDwalletIx,
-  buildRecordDepositIx,
 } from "../lib/vault";
 import { useTransactionStore } from "./useTransactionStore";
 import { useCollateralStore } from "./useCollateralStore";
+import { useHistoryStore } from "./useHistoryStore";
+import { useVaultSubscription } from "./useVaultSubscription";
 
 export type VaultState = VaultInfo | null | "loading";
 
-// Legacy message type — kept for Dashboard backward-compatibility
-export interface TxMessage {
-  type: "success" | "error" | "info";
-  text: string;
-  sig?: string;
-}
-
 export interface UseVaultReturn {
-  vaultInfo:             VaultState;
-  txMessage:             TxMessage | null;
-  isBusy:                boolean;
-  vaultPda:              string | null;
-  loadVault:             () => Promise<void>;
-  clearMessage:          () => void;
-  handleInitVault:       () => Promise<void>;
-  handleRegisterDWallet: () => Promise<void>;
-  handleRecordDeposit:   () => Promise<void>;
+  vaultInfo:       VaultState;
+  isBusy:          boolean;
+  vaultPda:        string | null;
+  loadVault:       () => Promise<void>;
+  handleInitVault: () => Promise<void>;
+  /**
+   * Registers a new dWallet with the vault.
+   * @param dwalletId - 32-byte Uint8Array. Use crypto.getRandomValues for devnet.
+   * @param chain     - Chain index: 0=BTC, 1=ETH, 2=SOL
+   * @param asset     - Asset index: 0=BTC, 1=ETH, 2=SOL
+   */
+  handleRegisterDWallet: (dwalletId: Uint8Array, chain: number, asset: number) => Promise<void>;
 }
 
 export function useVault(): UseVaultReturn {
   const { publicKey, sendTransaction } = useWallet();
   const { connection } = useConnection();
 
-  // ── Zustand stores ───────────────────────────────────────────────────────
-  const runTransaction = useTransactionStore((s) => s.runTransaction);
-  const txEntries      = useTransactionStore((s) => s.entries);
-  const fetchPositions = useCollateralStore((s) => s.fetchPositions);
+  const runTransaction  = useTransactionStore((s) => s.runTransaction);
+  const txEntries       = useTransactionStore((s) => s.entries);
+  const fetchPositions  = useCollateralStore((s) => s.fetchPositions);
+  const fetchHistory    = useHistoryStore((s) => s.fetchHistory);
 
-  // ── Local legacy state (keeps Dashboard API stable) ──────────────────────
   const [vaultInfo, setVaultInfo] = useState<VaultState>("loading");
-  const [txMessage, setTxMessage] = useState<TxMessage | null>(null);
   const [isBusy, setIsBusy]       = useState(false);
 
-  // Mirror latest Zustand tx entry → legacy txMessage banner
+  // Mirror transaction state → isBusy
   useEffect(() => {
     const latest = txEntries[0];
     if (!latest) return;
-    if (latest.state === "confirmed") {
-      setTxMessage({ type: "success", text: "Transaction confirmed", sig: latest.sig });
-      setIsBusy(false);
-    } else if (latest.state === "failed") {
-      setTxMessage({ type: "error", text: latest.error ?? "Transaction failed" });
+    if (latest.state === "confirmed" || latest.state === "failed") {
       setIsBusy(false);
     } else if (latest.state === "signing" || latest.state === "pending") {
-      setTxMessage({ type: "info", text: latest.label });
       setIsBusy(true);
     }
   }, [txEntries]);
@@ -70,7 +60,6 @@ export function useVault(): UseVaultReturn {
     [publicKey]
   );
 
-  // ── loadVault — refreshes raw vault + collateral store ───────────────────
   const loadVault = useCallback(async () => {
     if (!publicKey) return;
     setVaultInfo("loading");
@@ -78,22 +67,30 @@ export function useVault(): UseVaultReturn {
       const [info] = await Promise.all([
         fetchVaultInfo(connection, publicKey),
         fetchPositions(connection, publicKey),
+        fetchHistory(connection, publicKey),
       ]);
       setVaultInfo(info);
     } catch (e) {
-      console.error("loadVault:", e);
+      console.error("[useVault] loadVault error:", e);
       setVaultInfo(null);
     }
-  }, [publicKey, connection, fetchPositions]);
+  }, [publicKey, connection, fetchPositions, fetchHistory]);
 
+  // Initial load on wallet connect
   useEffect(() => {
-    if (publicKey) loadVault();
-    else setVaultInfo("loading");
+    if (publicKey) {
+      loadVault();
+    } else {
+      setVaultInfo("loading");
+      useCollateralStore.getState().reset();
+    }
   }, [publicKey, loadVault]);
 
-  const clearMessage = () => setTxMessage(null);
+  // Real-time WebSocket subscription — auto-updates on-chain changes
+  useVaultSubscription(publicKey);
 
-  // ── Actions — delegate to global transaction engine ──────────────────────
+  // ── Actions ───────────────────────────────────────────────────────────────
+
   const handleInitVault = async () => {
     if (!publicKey) return;
     const pda = deriveVaultPda(publicKey);
@@ -111,32 +108,21 @@ export function useVault(): UseVaultReturn {
     });
   };
 
-  const handleRegisterDWallet = async () => {
+  const handleRegisterDWallet = async (
+    dwalletId: Uint8Array,
+    chain: number,
+    asset: number
+  ) => {
     if (!publicKey) return;
     const pda = deriveVaultPda(publicKey);
-    await runTransaction({
-      label: "Registering BTC dWallet…",
-      buildTx: () => {
-        const tx = new Transaction();
-        tx.feePayer = publicKey;
-        tx.add(buildRegisterDwalletIx(publicKey, pda, 0, 0));
-        return tx;
-      },
-      connection,
-      sendTransaction,
-      onSuccess: () => loadVault(),
-    });
-  };
+    const chainLabel = ["Bitcoin", "Ethereum", "Solana"][chain] ?? `Chain(${chain})`;
 
-  const handleRecordDeposit = async () => {
-    if (!publicKey) return;
-    const pda = deriveVaultPda(publicKey);
     await runTransaction({
-      label: "Recording deposit…",
+      label: `Registering ${chainLabel} dWallet…`,
       buildTx: () => {
         const tx = new Transaction();
         tx.feePayer = publicKey;
-        tx.add(buildRecordDepositIx(publicKey, pda));
+        tx.add(buildRegisterDwalletIx(publicKey, pda, dwalletId, chain, asset));
         return tx;
       },
       connection,
@@ -147,13 +133,10 @@ export function useVault(): UseVaultReturn {
 
   return {
     vaultInfo,
-    txMessage,
     isBusy,
     vaultPda,
     loadVault,
-    clearMessage,
     handleInitVault,
     handleRegisterDWallet,
-    handleRecordDeposit,
   };
 }

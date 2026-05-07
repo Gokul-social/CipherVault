@@ -18,9 +18,6 @@ import {
   deriveVaultPda,
   buildRecordDepositIx,
   buildRecordWithdrawalIx,
-  encodeU64LE,
-  DISC,
-  VAULT_PROGRAM_ID,
 } from "../../lib/vault";
 import {
   formatUsd,
@@ -36,7 +33,7 @@ export default function CollateralPage() {
   const { connection } = useConnection();
 
   const store = useCollateralStore();
-  const runTransaction = useTransactionStore((s) => s.runTransaction);
+  const runTransaction  = useTransactionStore((s) => s.runTransaction);
   const addHistoryEntry = useHistoryStore((s) => s.addEntry);
 
   const loadData = useCallback(async () => {
@@ -44,9 +41,7 @@ export default function CollateralPage() {
     await store.fetchPositions(connection, publicKey);
   }, [publicKey, connection]);
 
-  useEffect(() => {
-    loadData();
-  }, [loadData]);
+  useEffect(() => { loadData(); }, [loadData]);
 
   if (!publicKey) {
     return (
@@ -60,74 +55,88 @@ export default function CollateralPage() {
     );
   }
 
-  const { positions, totalCollateralUsd, usedCreditUsd, ltvBps, isLoading, vaultExists, numPositions } = store;
+  const {
+    positions,
+    totalCollateralUsd,
+    usedCreditUsd,
+    ltvBps,
+    isLoading,
+    vaultExists,
+    numPositions,
+    oracleAuthority,
+  } = store;
 
   const score = vaultExists ? healthScore(totalCollateralUsd, usedCreditUsd, ltvBps) : 100;
-  const hf = vaultExists ? formatHealthFactor(totalCollateralUsd, usedCreditUsd) : "—";
+  const hf    = vaultExists ? formatHealthFactor(totalCollateralUsd, usedCreditUsd) : "—";
   const avail = vaultExists ? formatUsd(availableCredit(totalCollateralUsd, usedCreditUsd, ltvBps)) : "—";
 
-  const handleDeposit = async (rawAmount: bigint, usdPrice: bigint) => {
-    if (!publicKey) return;
-    const vaultPda = deriveVaultPda(publicKey);
-    const dwalletId = Buffer.alloc(32);
-    publicKey.toBuffer().copy(dwalletId);
+  // Gate oracle actions: deposit/withdraw require oracle = connected wallet
+  const isOracle = store.isUserOracle(publicKey.toBase58());
+
+  // Use first active position for deposit/withdraw targets
+  const primaryPosition = positions[0] ?? null;
+
+  const handleDeposit = async (rawAmount: bigint, usdPrice6dec: bigint) => {
+    if (!publicKey || !primaryPosition) return;
+
+    // dwalletId from on-chain position data (32-byte hex → Uint8Array)
+    const dwalletId = Uint8Array.from(Buffer.from(primaryPosition.dwalletId, "hex"));
+    const vaultPda  = deriveVaultPda(publicKey);
 
     const sig = await runTransaction({
-      label: `Deposit ${Number(rawAmount) / 100_000_000} BTC collateral`,
+      label: `Deposit ${(Number(rawAmount) / 1e8).toFixed(4)} ${primaryPosition.assetLabel}`,
       buildTx: () => {
-        const ix = buildRecordDepositIx(publicKey, vaultPda);
-        // Override with custom amounts
-        const data = Buffer.concat([
-          DISC.recordDeposit,
-          dwalletId,
-          encodeU64LE(rawAmount),
-          encodeU64LE(usdPrice),
-        ]);
-        ix.data = data;
+        const ix = buildRecordDepositIx(publicKey, vaultPda, dwalletId, rawAmount, usdPrice6dec);
         const tx = new Transaction().add(ix);
         tx.feePayer = publicKey;
         return tx;
       },
       connection,
       sendTransaction,
-      onSuccess: () => {
+      onSuccess: (txSig) => {
         addHistoryEntry({
           id: `deposit-${Date.now()}`,
           type: "deposit",
-          description: `Deposited ${Number(rawAmount) / 100_000_000} BTC`,
-          amount: `$${(Number(rawAmount) * Number(usdPrice) / (100_000_000 * 1_000_000)).toFixed(2)}`,
+          description: `Deposited ${(Number(rawAmount) / 1e8).toFixed(4)} ${primaryPosition.assetLabel}`,
+          amount: formatUsd((rawAmount * usdPrice6dec) / BigInt(1_000_000)),
           status: "confirmed",
           timestamp: Date.now(),
-          asset: "BTC",
+          txSig,
+          asset: primaryPosition.assetLabel,
+          chain: primaryPosition.chainLabel,
         });
         loadData();
       },
     });
   };
 
-  const handleWithdraw = async (rawAmount: bigint, usdPrice: bigint) => {
-    if (!publicKey) return;
-    const vaultPda = deriveVaultPda(publicKey);
+  const handleWithdraw = async (rawAmount: bigint, usdPrice6dec: bigint) => {
+    if (!publicKey || !primaryPosition) return;
+
+    const dwalletId = Uint8Array.from(Buffer.from(primaryPosition.dwalletId, "hex"));
+    const vaultPda  = deriveVaultPda(publicKey);
 
     const sig = await runTransaction({
-      label: `Withdraw ${Number(rawAmount) / 100_000_000} BTC collateral`,
+      label: `Withdraw ${(Number(rawAmount) / 1e8).toFixed(4)} ${primaryPosition.assetLabel}`,
       buildTx: () => {
-        const ix = buildRecordWithdrawalIx(publicKey, vaultPda, undefined, rawAmount, usdPrice);
+        const ix = buildRecordWithdrawalIx(publicKey, vaultPda, dwalletId, rawAmount, usdPrice6dec);
         const tx = new Transaction().add(ix);
         tx.feePayer = publicKey;
         return tx;
       },
       connection,
       sendTransaction,
-      onSuccess: () => {
+      onSuccess: (txSig) => {
         addHistoryEntry({
           id: `withdrawal-${Date.now()}`,
           type: "withdrawal",
-          description: `Withdrew ${Number(rawAmount) / 100_000_000} BTC`,
-          amount: `$${(Number(rawAmount) * Number(usdPrice) / (100_000_000 * 1_000_000)).toFixed(2)}`,
+          description: `Withdrew ${(Number(rawAmount) / 1e8).toFixed(4)} ${primaryPosition.assetLabel}`,
+          amount: formatUsd((rawAmount * usdPrice6dec) / BigInt(1_000_000)),
           status: "confirmed",
           timestamp: Date.now(),
-          asset: "BTC",
+          txSig,
+          asset: primaryPosition.assetLabel,
+          chain: primaryPosition.chainLabel,
         });
         loadData();
       },
@@ -146,7 +155,7 @@ export default function CollateralPage() {
           icon={<VaultIcon />}
           title="No Vault Found"
           description="Initialize a vault from the Dashboard before managing collateral."
-          action={{ label: "Go to Dashboard", onClick: () => window.location.href = "/" }}
+          action={{ label: "Go to Dashboard", onClick: () => (window.location.href = "/") }}
         />
       ) : (
         <div className="space-y-8">
@@ -192,6 +201,17 @@ export default function CollateralPage() {
             </div>
           </SectionContainer>
 
+          {/* Oracle Authority Notice */}
+          {vaultExists && !isLoading && !isOracle && (
+            <div className="rounded-xl border border-vault-accent/20 bg-vault-accent-glow px-4 py-3">
+              <p className="text-body-xs text-vault-accent">
+                ℹ️ Deposits and withdrawals require the oracle authority to sign.
+                Connected wallet is not the oracle for this vault.
+                Oracle: <span className="font-mono">{oracleAuthority ? shortenAddress(oracleAuthority) : "unknown"}</span>
+              </p>
+            </div>
+          )}
+
           {/* Positions List */}
           <SectionContainer
             title="Positions"
@@ -221,29 +241,31 @@ export default function CollateralPage() {
             )}
           </SectionContainer>
 
-          {/* Deposit & Withdraw */}
-          <div className="grid grid-cols-2 gap-6">
-            <DepositForm
-              onDeposit={handleDeposit}
-              isBusy={false}
-              hasPositions={numPositions > 0}
-            />
-            <WithdrawForm
-              onWithdraw={handleWithdraw}
-              isBusy={false}
-              currentRawAmount={positions[0]?.rawAmount ?? BigInt(0)}
-              currentUsdValue={positions[0]?.usdValue ?? BigInt(0)}
-              isWithdrawalSafe={(amount, price) => store.isWithdrawalSafe(0, amount, price)}
-              assetLabel={positions[0]?.assetLabel ?? "BTC"}
-            />
-          </div>
+          {/* Deposit & Withdraw — only shown if oracle matches */}
+          {vaultExists && isOracle && (
+            <div className="grid grid-cols-2 gap-6">
+              <DepositForm
+                onDeposit={handleDeposit}
+                isBusy={false}
+                hasPositions={numPositions > 0}
+                asset={primaryPosition?.assetLabel === "BTC" ? "BTC" : primaryPosition?.assetLabel === "ETH" ? "ETH" : "SOL"}
+              />
+              <WithdrawForm
+                onWithdraw={handleWithdraw}
+                isBusy={false}
+                currentRawAmount={primaryPosition?.rawAmount ?? BigInt(0)}
+                currentUsdValue={primaryPosition?.usdValue ?? BigInt(0)}
+                isWithdrawalSafe={(amount, price) => store.isWithdrawalSafe(0, amount, price)}
+                assetLabel={primaryPosition?.assetLabel ?? "BTC"}
+                asset={primaryPosition?.assetLabel === "BTC" ? "BTC" : primaryPosition?.assetLabel === "ETH" ? "ETH" : "SOL"}
+              />
+            </div>
+          )}
         </div>
       )}
     </AppLayout>
   );
 }
-
-// ── Icons ──────────────────────────────────────────────────────────────────
 
 function LockIcon() {
   return (
@@ -259,7 +281,6 @@ function VaultIcon() {
     <svg className="h-7 w-7 text-vault-accent" viewBox="0 0 24 24" fill="none">
       <rect x="2" y="3" width="20" height="18" rx="3" stroke="currentColor" strokeWidth="1.5" />
       <circle cx="12" cy="12" r="4" stroke="currentColor" strokeWidth="1.5" />
-      <path d="M12 8v1M12 15v1M8 12h1M15 12h1" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
     </svg>
   );
 }

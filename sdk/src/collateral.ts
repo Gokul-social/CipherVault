@@ -295,37 +295,25 @@ export async function createAndRegisterDWallet(
   const cryptoConfig = getChainCryptoConfig(chain);
 
   // --- Step 1: Create dWallet via Ika SDK ---
-  // [IKA-VERIFY: The exact SDK API for DKG may differ from this pattern.
-  // Verify against the latest @ika.xyz/sdk documentation.]
+  // The Ika SDK DKG flow is not yet available in pre-alpha.
+  // When IKA_ENABLED=false, the caller is responsible for providing
+  // a real random 32-byte dWallet ID (e.g. from crypto.getRandomValues).
+  // This function requires the dwalletId to be passed in — it never
+  // generates a fake deterministic ID from the user's pubkey.
   const ikaClient = createDevnetIkaClient(provider.connection);
 
   let dwalletId: Uint8Array;
-  try {
-    const result = await ikaClient.createDwallet(chain, user);
-    dwalletId = result.dwalletId;
-  } catch (e) {
-    // During development, generate a deterministic placeholder ID
-    // This allows the on-chain registration flow to be tested end-to-end
-    // before the Ika SDK DKG is fully functional.
-    console.warn(
-      `[IKA-VERIFY] dWallet creation not yet available, using deterministic ID for chain=${chain}`
-    );
-    const encoder = new TextEncoder();
-    const seed = encoder.encode(`dwallet-${chain}-${user.toBase58()}`);
-    dwalletId = new Uint8Array(32);
-    for (let i = 0; i < 32; i++) {
-      dwalletId[i] = seed[i % seed.length];
-    }
-  }
+
+  // Attempt real Ika DKG — throws if SDK is not available.
+  // Caller must handle the error and provide an alternative dwalletId
+  // (e.g. a random 32-byte value for devnet testing).
+  const result = await ikaClient.createDwallet(chain, user);
+  dwalletId = result.dwalletId;
 
   // --- Step 2: Transfer authority to vault PDA ---
-  // [IKA-VERIFY: The authority transfer mechanism may be a Sui transaction
-  // or a Solana instruction. Verify the exact flow with Ika pre-alpha docs.]
-  try {
-    await ikaClient.transferAuthorityToPda(dwalletId, vaultPda);
-  } catch (e) {
-    console.warn("[IKA-VERIFY] Authority transfer not yet available, skipping");
-  }
+  // This is required so the vault program can CPI-authorize signing.
+  // Throws if not yet available — caller must handle.
+  await ikaClient.transferAuthorityToPda(dwalletId, vaultPda);
 
   // --- Step 3: Register on-chain ---
   // Map ChainAsset enum to chain/asset bytes for the program
@@ -434,7 +422,7 @@ export async function getVaultState(
     availableCredit: availableCredit.gtn(0) ? availableCredit : new BN(0),
     utilizationBps,
     positions,
-    activeOrderCount: 0, // Populated by ciphervault-core in Phase 2
+    activeOrderCount: 0, // Order count requires fetching from ciphervault-core program
   };
 }
 
