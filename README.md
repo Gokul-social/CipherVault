@@ -2,114 +2,114 @@
 
 Confidential institutional prime brokerage on Solana powered by **Ika dWallets** and **Encrypt FHE**.
 
-## Live Links
+## Live Deployment
 
-- App: https://ciphervault-ui.vercel.app
-- Repository: https://github.com/Gokul-social/CipherVault
+- **Application Web Interface**: https://ciphervault-ui.vercel.app
+- **Source Repository**: https://github.com/Gokul-social/CipherVault
 
-## Architecture Flow
+## Deployed Smart Contracts (Solana Devnet)
+
+- **CipherVault Core**: `8Voz2Petb9Q4xYMCqjNVXSyTzkmzMsK3cTrSVGGLF8Ug`
+- **Collateral Vault**: `4jJrbTHiAP5ocWhbUqJG6m1bQ6cRkNi7vJvHWpRABwBm`
+
+## System Architecture
 
 ```mermaid
-flowchart TB
-    %% =========================
-    %% User / Entry Layer
-    %% =========================
-    U[Institutional Trader\nWallet + Signed Intents]
+graph TD
+    %% Styling Profile
+    classDef default fill:#1E293B,stroke:#334155,stroke-width:1px,color:#F8FAFC,font-family:Inter
+    classDef user fill:#0F172A,stroke:#38BDF8,stroke-width:2px,color:#F8FAFC,font-family:Inter
+    classDef frontend fill:#1E293B,stroke:#818CF8,stroke-width:2px,color:#F8FAFC,font-family:Inter
+    classDef onchain fill:#1E293B,stroke:#10B981,stroke-width:2px,color:#F8FAFC,font-family:Inter
+    classDef conf fill:#1E293B,stroke:#F43F5E,stroke-width:2px,color:#F8FAFC,font-family:Inter
+    classDef ext fill:#1E293B,stroke:#F59E0B,stroke-width:2px,color:#F8FAFC,font-family:Inter
 
-    subgraph FE[Frontend Experience]
-      WEB[CipherVault Dashboard\nNext.js 15 + Tailwind + Wallet Adapter]
-      STATE[State + Hooks\nZustand Stores + Typed Actions]
-      SDK[@ciphervault/sdk\nIkaClient + EncryptClient + CollateralClient]
+    subgraph User["User Layer"]
+        Trader["Institutional Trader\n(Wallet + Signed Intents)"]:::user
     end
 
-    %% =========================
-    %% Solana Settlement Layer
-    %% =========================
-    subgraph SOL[Solana Devnet Settlement Layer]
-      CORE[ciphervault-core\nEncrypted Order Flow + Trade Logic]
-      VAULT[collateral-vault\nVault Health + Credit + LTV Guardrails]
-      PDA[Protocol PDAs\nVault Accounts + Positions + Orders]
-      PYTH[Pyth Price Feeds\nBTC / ETH / SOL USD]
+    subgraph Frontend["Frontend Client Layer"]
+        WebUI["CipherVault Dashboard\n(Next.js 15 + Tailwind + Wallet Adapter)"]:::frontend
+        Store["State Management\n(Zustand + Hooks)"]:::frontend
+        SDK["CipherVault SDK\n(IkaClient + EncryptClient + ProtocolClient)"]:::frontend
     end
 
-    %% =========================
-    %% Confidential Compute Layer
-    %% =========================
-    subgraph CONF[Confidential Infrastructure]
-      IKA[Ika dWallet Network\nThreshold MPC / Cross-chain Custody]
-      ENC[Encrypt Protocol\nFHE Encryption + Decryption Requests]
+    subgraph Solana["Solana Devnet Settlement Layer"]
+        Core["CipherVault Core Program\n(Encrypted Order Flow + Trade Logic)"]:::onchain
+        Vault["Collateral Vault Program\n(Vault Health + Credit + LTV Guardrails)"]:::onchain
+        PDAs["Protocol PDAs\n(Vault Accounts + Positions + Orders)"]:::onchain
     end
 
-    %% =========================
-    %% Cross-chain Collateral Layer
-    %% =========================
-    subgraph XC[Cross-chain Collateral Sources]
-      BTC[Bitcoin]
-      ETH[Ethereum]
-      SOLA[Solana Native Assets]
+    subgraph Confidential["Confidential Compute Layer"]
+        Ika["Ika dWallet Network\n(Threshold MPC + Cross-chain Custody)"]:::conf
+        Encrypt["Encrypt Protocol\n(FHE Encryption + Decryption Requests)"]:::conf
     end
 
-    %% User -> App
-    U --> WEB
-    WEB --> STATE
-    STATE --> SDK
+    subgraph External["External Services & Assets"]
+        Pyth["Pyth Price Feeds\n(BTC / ETH / SOL Oracles)"]:::ext
+        CrossChain["Cross-chain Collateral Sources\n(Bitcoin + Ethereum + Solana Native)"]:::ext
+    end
 
-    %% SDK -> Confidential + Solana
-    SDK -->|Register / control dWallets| IKA
-    SDK -->|Encrypt size + price| ENC
-    SDK -->|Submit instructions| CORE
-    SDK -->|Update collateral & credit| VAULT
+    %% Interactions and Data Flow
+    Trader -- "Interacts" --> WebUI
+    WebUI -- "Dispatches Actions" --> Store
+    Store -- "Invokes Methods" --> SDK
 
-    %% Solana internal coupling
-    CORE --> PDA
-    VAULT --> PDA
-    VAULT --> PYTH
+    %% SDK Operations
+    SDK -- "Registers / Controls dWallets" --> Ika
+    SDK -- "Encrypts Trade Data" --> Encrypt
+    SDK -- "Submits Encrypted Instructions" --> Core
+    SDK -- "Manages Collateral State" --> Vault
 
-    %% Cross-chain collateral routing
-    BTC --> IKA
-    ETH --> IKA
-    SOLA --> IKA
-    IKA -->|Collateral state updates| VAULT
+    %% On-chain Operations
+    Core -- "Updates Protocol State" --> PDAs
+    Vault -- "Updates Protocol State" --> PDAs
+    Core -- "Settlement & Risk Constraints" --> Vault
+    Vault -- "Reads Price Oracles" --> Pyth
 
-    %% Confidential trade loop
-    ENC -->|Ciphertext payloads| CORE
-    CORE -->|Settlement + risk checks| VAULT
-
-    %% Visual styling
-    classDef user fill:#f9f3d6,stroke:#c99700,stroke-width:1.5px,color:#3f2f00;
-    classDef front fill:#dff6ff,stroke:#0b84a5,stroke-width:1.5px,color:#0a2d36;
-    classDef chain fill:#e8f5e9,stroke:#2e7d32,stroke-width:1.5px,color:#173d1a;
-    classDef conf fill:#ffe7ef,stroke:#c2185b,stroke-width:1.5px,color:#4a1028;
-    classDef assets fill:#efe9ff,stroke:#5e35b1,stroke-width:1.5px,color:#2d1761;
-
-    class U user;
-    class WEB,STATE,SDK front;
-    class CORE,VAULT,PDA,PYTH chain;
-    class IKA,ENC conf;
-    class BTC,ETH,SOLA assets;
+    %% Confidential & External Integrations
+    Ika -- "Cross-chain State Sync" --> Vault
+    Encrypt -- "Provides Ciphertexts" --> Core
+    CrossChain -- "Custodial Deposits" --> Ika
 ```
 
-## Core Components
+## Core Project Structure
 
-- `app/`: Next.js dashboard and trading UX.
-- `sdk/`: TypeScript clients for Ika, Encrypt, and protocol interactions.
-- `programs/ciphervault-core`: Order flow and encrypted trading logic.
-- `programs/collateral-vault`: Collateral, vault health, and credit accounting.
-- `tests/`: Anchor and integration-level protocol tests.
+- `app/`: Next.js 15 dashboard, UI components, and trading interface.
+- `sdk/`: TypeScript client libraries for integrating Ika, Encrypt, and protocol operations.
+- `programs/ciphervault-core`: Anchor program for handling encrypted order flows and execution logic.
+- `programs/collateral-vault`: Anchor program managing collateral deposits, vault health, and credit accounting.
+- `tests/`: End-to-end integration tests validating protocol integrity.
 
-## Local Development
+## Local Development Setup
+
+To run the application locally, execute the following commands in the terminal:
 
 ```bash
+# Install all workspace dependencies
 npm install
+
+# Start the development server
 npm run dev
 ```
 
-## Workspace Scripts
+## Available Workspace Scripts
+
+The workspace provides several utility scripts for streamlined development:
 
 ```bash
+# Build the TypeScript SDK package
 npm run build:sdk
+
+# Build the Next.js application for production
 npm run build:app
+
+# Execute Anchor smart contract test suite
 npm run test:anchor
+
+# Execute SDK integration tests
 npm run test:sdk
+
+# Configure and setup local Devnet environment
 npm run setup:devnet
 ```
