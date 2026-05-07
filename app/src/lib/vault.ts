@@ -141,6 +141,7 @@ export function buildRecordDepositIx(
     programId: VAULT_PROGRAM_ID,
     keys: [
       { pubkey: vaultPda, isSigner: false, isWritable: true  },
+      // oracle_authority: must match vault.oracle_authority (set to owner at init)
       { pubkey: owner,    isSigner: true,  isWritable: false },
     ],
     data,
@@ -150,6 +151,10 @@ export function buildRecordDepositIx(
 /**
  * Builds a record_withdrawal instruction.
  * record_withdrawal: [disc(8) + dwalletId(32) + rawAmount(8) + usdPrice6dec(8)]
+ *
+ * Account layout (must match RecordWithdrawal context in lib.rs):
+ *   0. vault         — writable, PDA
+ *   1. oracle_authority — signer (== owner, set at vault init)
  */
 export function buildRecordWithdrawalIx(
   owner: PublicKey,
@@ -173,6 +178,7 @@ export function buildRecordWithdrawalIx(
     programId: VAULT_PROGRAM_ID,
     keys: [
       { pubkey: vaultPda, isSigner: false, isWritable: true },
+      // oracle_authority: must match vault.oracle_authority (set to owner at vault initialization)
       { pubkey: owner,    isSigner: true,  isWritable: false },
     ],
     data,
