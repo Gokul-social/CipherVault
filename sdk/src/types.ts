@@ -213,7 +213,7 @@ export interface CipherVaultConfig {
 }
 
 /**
- * Default devnet configuration. Program IDs are placeholders until first deploy.
+ * Default devnet configuration. Program IDs are deployed on devnet.
  */
 export const DEVNET_CONFIG: CipherVaultConfig = {
   rpcEndpoint: "https://api.devnet.solana.com",

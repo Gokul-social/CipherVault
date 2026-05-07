@@ -139,30 +139,26 @@ describe("ciphervault-core", () => {
 
   describe("initialize", () => {
     it("initializes the protocol state with correct parameters", async () => {
-      // After `anchor build`, uncomment and use:
-      //
-      // const [protocolPda] = findProtocolPda(coreProgram.programId);
-      //
-      // await coreProgram.methods
-      //   .initialize(maxLeverageBps, settlementWindowSlots, feeRateBps)
-      //   .accounts({
-      //     protocol: protocolPda,
-      //     authority: authority.publicKey,
-      //     systemProgram: SystemProgram.programId,
-      //   })
-      //   .rpc();
-      //
-      // const protocolAccount = await coreProgram.account.protocol.fetch(protocolPda);
-      // expect(protocolAccount.authority.toBase58()).to.equal(authority.publicKey.toBase58());
-      // expect(protocolAccount.maxLeverageBps).to.equal(maxLeverageBps);
-      // expect(protocolAccount.settlementWindowSlots.toNumber()).to.equal(100);
-      // expect(protocolAccount.feeRateBps).to.equal(feeRateBps);
-      // expect(protocolAccount.isFrozen).to.be.false;
-      // expect(protocolAccount.totalVaults.toNumber()).to.equal(0);
-      // expect(protocolAccount.totalOrders.toNumber()).to.equal(0);
-      // expect(protocolAccount.totalSettlements.toNumber()).to.equal(0);
+      const [protocolPda] = findProtocolPda(coreProgram.programId);
 
-      console.log("⏳ initialize test: awaiting first `anchor build` for IDL generation");
+      await coreProgram.methods
+        .initialize(maxLeverageBps, settlementWindowSlots, feeRateBps)
+        .accounts({
+          protocol: protocolPda,
+          authority: authority.publicKey,
+          systemProgram: SystemProgram.programId,
+        })
+        .rpc();
+
+      const protocolAccount = await coreProgram.account.protocol.fetch(protocolPda);
+      expect(protocolAccount.authority.toBase58()).to.equal(authority.publicKey.toBase58());
+      expect(protocolAccount.maxLeverageBps).to.equal(maxLeverageBps);
+      expect(protocolAccount.settlementWindowSlots.toNumber()).to.equal(100);
+      expect(protocolAccount.feeRateBps).to.equal(feeRateBps);
+      expect(protocolAccount.isFrozen).to.be.false;
+      expect(protocolAccount.totalVaults.toNumber()).to.equal(0);
+      expect(protocolAccount.totalOrders.toNumber()).to.equal(0);
+      expect(protocolAccount.totalSettlements.toNumber()).to.equal(0);
     });
   });
 
