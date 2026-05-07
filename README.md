@@ -2,7 +2,7 @@
   <br />
   <h1>CIPHERVAULT</h1>
   <p>
-    <strong>Confidential institutional prime brokerage on Solana powered by Ika dWallets and Encrypt FHE.</strong>
+    <strong>A secure trading platform that lets institutions manage and trade cross-chain assets in complete privacy.</strong>
   </p>
   
   <p>
@@ -22,7 +22,7 @@
   <br />
 </div>
 
-> **CIPHERVAULT** is an institutional-grade prime brokerage platform on Solana. Featuring confidential cross-chain asset custody via Ika dWallets, fully homomorphic encrypted (FHE) order flows via Encrypt, and robust on-chain settlement — this is bridgeless capital markets meets privacy-preserving DeFi.
+> **CIPHERVAULT** bridges the gap between different blockchains to give institutions a secure, unified trading platform. Built on Solana, it uses advanced encryption to keep sensitive trade details completely hidden while still ensuring fast, reliable, and transparent execution.
 
 ---
 
