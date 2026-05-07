@@ -44,7 +44,7 @@ interface WalletModalProps {
 }
 
 export function WalletModal({ isOpen, onClose }: WalletModalProps) {
-  const { select, wallets, wallet: connected } = useWallet();
+  const { select, wallets, wallet: connected, disconnect, disconnecting } = useWallet();
   const overlayRef = useRef<HTMLDivElement>(null);
 
   // Lock body scroll when open
@@ -84,6 +84,16 @@ export function WalletModal({ isOpen, onClose }: WalletModalProps) {
     } else {
       const url = INSTALL_URLS[name as string];
       if (url) window.open(url, "_blank");
+    }
+  }
+
+  async function handleDisconnect(event: React.MouseEvent<HTMLButtonElement>) {
+    event.preventDefault();
+    event.stopPropagation();
+    try {
+      await disconnect();
+    } catch (error) {
+      console.error("Failed to disconnect wallet:", error);
     }
   }
 
@@ -171,7 +181,20 @@ export function WalletModal({ isOpen, onClose }: WalletModalProps) {
                   {/* Status badge */}
                   <div className="shrink-0">
                     {isActive ? (
-                      <span className="text-label-sm text-vault-success">Connected</span>
+                      <button
+                        type="button"
+                        onClick={handleDisconnect}
+                        disabled={disconnecting}
+                        className={cn(
+                          "rounded-md border border-vault-danger/35 bg-vault-danger-dim px-2.5 py-1",
+                          "text-label-sm text-vault-danger transition-colors",
+                          "hover:bg-vault-danger hover:text-white",
+                          "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-vault-danger/35",
+                          "disabled:cursor-not-allowed disabled:opacity-70"
+                        )}
+                      >
+                        {disconnecting ? "Disconnecting..." : "Disconnect"}
+                      </button>
                     ) : isReady ? (
                       <span className="text-label-sm text-vault-subtext">Detected</span>
                     ) : (
