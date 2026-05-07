@@ -1,6 +1,10 @@
-# CipherVault
-
-Confidential institutional prime brokerage on Solana powered by **Ika dWallets** and **Encrypt FHE**.
+<div align="center">
+  <h1>CipherVault</h1>
+  <p>
+    <b>Confidential institutional prime brokerage on Solana powered by Ika dWallets and Encrypt FHE.</b>
+  </p>
+</div>
+<br/>
 
 ## Live Deployment
 
