@@ -5,31 +5,43 @@ import { useWallet } from "@solana/wallet-adapter-react";
 import type { WalletName } from "@solana/wallet-adapter-base";
 import { cn } from "../../lib/cn";
 
-interface WalletModalProps {
-  isOpen:   boolean;
-  onClose:  () => void;
-}
+// Fallback accent colours per wallet (only used for the icon ring)
+const WALLET_COLORS: Record<string, string> = {
+  Phantom:  "#ab9ff2",
+  Solflare: "#fc8800",
+  Backpack: "#e33e3f",
+  Coinbase: "#0052ff",
+  Trust:    "#3375bb",
+  Ledger:   "#ffffff",
+};
 
-const KNOWN_WALLETS = [
-  {
-    name:  "Phantom",
-    icon:  "https://phantom.app/img/phantom-logo.svg",
-    color: "#ab9ff2",
-    desc:  "Most popular Solana wallet",
-  },
-  {
-    name:  "Solflare",
-    icon:  "https://solflare.com/assets/logo.svg",
-    color: "#fc8800",
-    desc:  "Hardware wallet support",
-  },
-  {
-    name:  "Backpack",
-    icon:  "https://backpack.app/images/icon.png",
-    color: "#e33e3f",
-    desc:  "Multi-chain xNFT wallet",
-  },
-];
+// Short descriptions per wallet
+const WALLET_DESCS: Record<string, string> = {
+  Phantom:  "Most popular Solana wallet",
+  Solflare: "Hardware wallet support",
+  Backpack: "Multi-chain xNFT wallet",
+  Coinbase: "Coinbase institutional wallet",
+  Trust:    "Trust Wallet — mobile first",
+  Ledger:   "Hardware cold wallet",
+};
+
+// Install URLs for wallets not yet installed
+const INSTALL_URLS: Record<string, string> = {
+  Phantom:  "https://phantom.app",
+  Solflare: "https://solflare.com",
+  Backpack: "https://backpack.app",
+  Coinbase: "https://www.coinbase.com/wallet",
+  Trust:    "https://trustwallet.com",
+  Ledger:   "https://www.ledger.com",
+};
+
+// Priority order for display
+const PRIORITY = ["Phantom", "Solflare", "Backpack", "Coinbase", "Trust", "Ledger"];
+
+interface WalletModalProps {
+  isOpen:  boolean;
+  onClose: () => void;
+}
 
 export function WalletModal({ isOpen, onClose }: WalletModalProps) {
   const { select, wallets, wallet: connected } = useWallet();
@@ -51,22 +63,27 @@ export function WalletModal({ isOpen, onClose }: WalletModalProps) {
 
   if (!isOpen) return null;
 
-  // Merge adapter wallets with our known list for display
-  const adapterWalletNames = wallets.map((w) => w.adapter.name);
+  // Build display list: registered adapters sorted by priority, then any extras
+  const adapterMap = new Map(wallets.map((w) => [w.adapter.name as string, w]));
 
-  function handleSelect(name: string) {
+  const prioritised = PRIORITY
+    .filter((name) => adapterMap.has(name))
+    .map((name) => adapterMap.get(name)!);
+
+  const extras = wallets.filter(
+    (w) => !PRIORITY.includes(w.adapter.name as string)
+  );
+
+  const displayList = [...prioritised, ...extras];
+
+  function handleSelect(name: WalletName<string>) {
     const found = wallets.find((w) => w.adapter.name === name);
     if (found) {
       select(found.adapter.name);
       onClose();
     } else {
-      // Wallet not installed — open install page
-      const urls: Record<string, string> = {
-        Phantom:  "https://phantom.app",
-        Solflare: "https://solflare.com",
-        Backpack: "https://backpack.app",
-      };
-      if (urls[name]) window.open(urls[name], "_blank");
+      const url = INSTALL_URLS[name as string];
+      if (url) window.open(url, "_blank");
     }
   }
 
@@ -110,53 +127,52 @@ export function WalletModal({ isOpen, onClose }: WalletModalProps) {
         </div>
 
         {/* Wallet list */}
-        <ul className="divide-y divide-vault-border-subtle px-2 py-2">
-          {KNOWN_WALLETS.map((w) => {
-            const isInstalled = adapterWalletNames.includes(w.name as WalletName<string>);
-            const isActive    = connected?.adapter.name === (w.name as WalletName<string>);
+        <ul className="divide-y divide-vault-border-subtle px-2 py-2 max-h-72 overflow-y-auto">
+          {displayList.map((w) => {
+            const name    = w.adapter.name as string;
+            const icon    = w.adapter.icon;          // base64 data URI — always loads
+            const color   = WALLET_COLORS[name] ?? "#6b7280";
+            const desc    = WALLET_DESCS[name]  ?? w.adapter.url ?? "";
+            const isActive = connected?.adapter.name === w.adapter.name;
+            const isReady  = w.readyState === "Installed" || w.readyState === "Loadable";
 
             return (
-              <li key={w.name}>
+              <li key={name}>
                 <button
-                  onClick={() => handleSelect(w.name)}
+                  onClick={() => handleSelect(w.adapter.name)}
                   className={cn(
                     "group flex w-full items-center gap-3 rounded-xl px-4 py-3",
                     "transition-all duration-150",
-                    isActive
-                      ? "bg-vault-elevated"
-                      : "hover:bg-vault-elevated",
+                    isActive ? "bg-vault-elevated" : "hover:bg-vault-elevated",
                     "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-vault-accent/40"
                   )}
                 >
-                  {/* Icon */}
+                  {/* Icon — uses adapter's built-in base64 icon, never broken */}
                   <div
-                    className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl"
-                    style={{ backgroundColor: `${w.color}18`, border: `1px solid ${w.color}30` }}
+                    className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl overflow-hidden"
+                    style={{ backgroundColor: `${color}18`, border: `1px solid ${color}30` }}
                   >
                     {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img
-                      src={w.icon}
-                      alt={w.name}
-                      className="h-6 w-6 object-contain"
-                      onError={(e) => {
-                        (e.target as HTMLImageElement).style.display = "none";
-                      }}
+                      src={icon}
+                      alt={name}
+                      width={28}
+                      height={28}
+                      className="h-7 w-7 object-contain"
                     />
                   </div>
 
                   {/* Text */}
                   <div className="flex-1 text-left">
-                    <div className="text-body-sm font-medium text-vault-text">
-                      {w.name}
-                    </div>
-                    <div className="text-body-xs text-vault-subtext">{w.desc}</div>
+                    <div className="text-body-sm font-medium text-vault-text">{name}</div>
+                    <div className="text-body-xs text-vault-subtext">{desc}</div>
                   </div>
 
-                  {/* Status */}
+                  {/* Status badge */}
                   <div className="shrink-0">
                     {isActive ? (
                       <span className="text-label-sm text-vault-success">Connected</span>
-                    ) : isInstalled ? (
+                    ) : isReady ? (
                       <span className="text-label-sm text-vault-subtext">Detected</span>
                     ) : (
                       <span className="text-label-sm text-vault-muted opacity-0 group-hover:opacity-100 transition-opacity">
@@ -168,6 +184,13 @@ export function WalletModal({ isOpen, onClose }: WalletModalProps) {
               </li>
             );
           })}
+
+          {/* Empty state if no adapters loaded yet */}
+          {displayList.length === 0 && (
+            <li className="px-4 py-8 text-center text-body-sm text-vault-muted">
+              No wallets detected. Install Phantom or Solflare to continue.
+            </li>
+          )}
         </ul>
 
         {/* Footer */}

@@ -32,7 +32,7 @@ interface TransactionStore {
     label: string;
     buildTx: () => Transaction | Promise<Transaction>;
     connection: Connection;
-    sendTransaction: (tx: Transaction, connection: Connection) => Promise<string>;
+    sendTransaction: (tx: Transaction, connection: Connection, options?: Record<string, unknown>) => Promise<string>;
     onSuccess?: (sig: string) => void;
   }) => Promise<string | null>;
 }
@@ -105,18 +105,27 @@ export const useTransactionStore = create<TransactionStore>((set, get) => ({
 
     try {
       const tx = await buildTx();
-      tx.recentBlockhash = (await connection.getLatestBlockhash()).blockhash;
+      const { blockhash, lastValidBlockHeight } = await connection.getLatestBlockhash("confirmed");
+      tx.recentBlockhash = blockhash;
 
-      const sig = await sendTransaction(tx, connection);
+      const sig = await sendTransaction(tx, connection, { skipPreflight: false, preflightCommitment: "confirmed" });
       pendingTx(id, sig);
 
-      await connection.confirmTransaction(sig, "confirmed");
+      await connection.confirmTransaction(
+        { signature: sig, blockhash, lastValidBlockHeight },
+        "confirmed"
+      );
       confirmTx(id);
 
       onSuccess?.(sig);
       return sig;
     } catch (e: any) {
-      failTx(id, e?.message ?? "Transaction failed");
+      // Extract meaningful error: Anchor errors nest inside logs
+      const raw: string = e?.message ?? "";
+      const anchorMatch = raw.match(/custom program error: (0x[0-9a-fA-F]+)/);
+      const logMatch = raw.match(/Error Message: (.+?)(?:\.|$)/);
+      const msg = logMatch?.[1] ?? anchorMatch?.[0] ?? raw ?? "Transaction failed";
+      failTx(id, msg);
       return null;
     }
   },
