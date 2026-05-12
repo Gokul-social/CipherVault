@@ -24,6 +24,10 @@
 
 > **SOVERMIND** is a local-first AI health companion that brings advanced medical inferences—chat, OCR, voice transcription, and translation—directly to your machine. Zero bytes are sent to the cloud. Featuring Solana micro-payments for premium reports and Tether's robust QVAC SDK. This is health privacy meets absolute digital sovereignty.
 
+<div align="center">
+  <img src="public/monitor-1.png" alt="SoverMind Landing Page" width="100%" style="border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.5); margin: 20px 0;" />
+</div>
+
 ---
 
 ## Table of Contents
