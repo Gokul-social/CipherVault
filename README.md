@@ -1,144 +1,146 @@
 <div align="center">
   <br />
-  <h1>CIPHERVAULT</h1>
+  <h1>SOVERMIND</h1>
   <p>
-    <strong>A secure trading platform that lets institutions manage and trade cross-chain assets in complete privacy.</strong>
+    <strong>Private. Offline. Sovereign. A local-first AI health companion that runs entirely on your device.</strong>
   </p>
   
   <p>
-    <a href="https://ciphervault-ui.vercel.app"><img src="https://img.shields.io/badge/LIVE_APP-ciphervault--ui.vercel.app-14F195?style=for-the-badge" alt="Live App" /></a>
-    <a href="https://explorer.solana.com/address/8Voz2Petb9Q4xYMCqjNVXSyTzkmzMsK3cTrSVGGLF8Ug?cluster=devnet"><img src="https://img.shields.io/badge/CORE_PROGRAM-Solana_Explorer-9945FF?style=for-the-badge" alt="Core Contract" /></a>
-    <a href="https://explorer.solana.com/address/4jJrbTHiAP5ocWhbUqJG6m1bQ6cRkNi7vJvHWpRABwBm?cluster=devnet"><img src="https://img.shields.io/badge/VAULT_PROGRAM-Solana_Explorer-14F195?style=for-the-badge" alt="Vault Contract" /></a>
+    <a href="https://sovermind-app.vercel.app/"><img src="https://img.shields.io/badge/LIVE_APP-sovermind--app.vercel.app-70ffe0?style=for-the-badge" alt="Live App" /></a>
+    <a href="https://explorer.solana.com/address/Gyk1UsWrmo2W3p4LGTyyFbsXCWwsocKVc8X3tdDaJXJ4?cluster=devnet"><img src="https://img.shields.io/badge/SOLANA-DEVNET-9945FF?style=for-the-badge" alt="Solana Devnet" /></a>
+    <a href="https://qvac.tether.io"><img src="https://img.shields.io/badge/QVAC-SDK_INTEGRATED-00dfbe?style=for-the-badge" alt="QVAC SDK" /></a>
   </p>
 
   <p>
-    <img src="https://img.shields.io/badge/Next.js-000000.svg?style=for-the-badge&logo=next.js&logoColor=white" alt="Next.js" />
-    <img src="https://img.shields.io/badge/tailwindcss-%2338B2AC.svg?style=for-the-badge&logo=tailwind-css&logoColor=white" alt="Tailwind CSS" />
-    <img src="https://img.shields.io/badge/Solana-000000.svg?style=for-the-badge&logo=solana&logoColor=white" alt="Solana" />
-    <img src="https://img.shields.io/badge/Rust-000000.svg?style=for-the-badge&logo=rust&logoColor=white" alt="Rust" />
-    <img src="https://img.shields.io/badge/Anchor-9945FF.svg?style=for-the-badge&logo=anchor&logoColor=white" alt="Anchor" />
-    <img src="https://img.shields.io/badge/Vercel-000000.svg?style=for-the-badge&logo=vercel&logoColor=white" alt="Vercel" />
+    <img src="https://img.shields.io/badge/React-%2320232a.svg?style=for-the-badge&logo=react&logoColor=%2361DAFB" alt="React" />
+    <img src="https://img.shields.io/badge/Fastify-%23000000.svg?style=for-the-badge&logo=fastify&logoColor=white" alt="Fastify" />
+    <img src="https://img.shields.io/badge/Tether%20QVAC-00dfbe.svg?style=for-the-badge&logo=tether&logoColor=white" alt="QVAC" />
+    <img src="https://img.shields.io/badge/ONNX-%23005CED.svg?style=for-the-badge&logo=onnx&logoColor=white" alt="ONNX" />
+    <img src="https://img.shields.io/badge/Solana-9945FF.svg?style=for-the-badge&logo=solana&logoColor=white" alt="Solana" />
+    <img src="https://img.shields.io/badge/Vite-646CFF.svg?style=for-the-badge&logo=vite&logoColor=white" alt="Vite" />
   </p>
   <br />
 </div>
 
-> **CIPHERVAULT** bridges the gap between different blockchains to give institutions a secure, unified trading platform. Built on Solana, it uses advanced encryption to keep sensitive trade details completely hidden while still ensuring fast, reliable, and transparent execution.
+> **SOVERMIND** is a local-first AI health companion that brings advanced medical inferences—chat, OCR, voice transcription, and translation—directly to your machine. Zero bytes are sent to the cloud. Featuring Solana micro-payments for premium reports and Tether's robust QVAC SDK. This is health privacy meets absolute digital sovereignty.
 
 ---
 
 ## Table of Contents
 
 - [Live Deployment](#live-deployment)
+- [Screenshots](#screenshots)
 - [System Architecture](#system-architecture)
+- [Pipeline Architecture](#pipeline-architecture)
 - [Protocol Features](#protocol-features)
 - [Technology Stack](#technology-stack)
 - [Quick Start](#quick-start)
-- [Workspace Scripts](#workspace-scripts)
+- [Privacy Guarantees](#privacy-guarantees)
 - [Project Structure](#project-structure)
 
 ---
 
 ## Live Deployment
 
-| Component | URL / ID | Status |
+| Component | URL | Status |
 |:---|:---|:---:|
-| **Frontend Dashboard** | [ciphervault-ui.vercel.app](https://ciphervault-ui.vercel.app) | Live |
-| **CipherVault Core** | [`8Voz...F8Ug`](https://explorer.solana.com/address/8Voz2Petb9Q4xYMCqjNVXSyTzkmzMsK3cTrSVGGLF8Ug?cluster=devnet) | Deployed |
-| **Collateral Vault** | [`4jJr...wBm`](https://explorer.solana.com/address/4jJrbTHiAP5ocWhbUqJG6m1bQ6cRkNi7vJvHWpRABwBm?cluster=devnet) | Deployed |
+| **Frontend App** | [sovermind-app.vercel.app](https://sovermind-app.vercel.app/) | Live Demo |
+| **Solana Program** | [`Gyk1UsWrmo2W3p4LGTyyFbsXCWwsocKVc8X3tdDaJXJ4`](https://explorer.solana.com/address/Gyk1UsWrmo2W3p4LGTyyFbsXCWwsocKVc8X3tdDaJXJ4?cluster=devnet) | Deployed |
 | **Network** | Solana Devnet | Active |
 
-### Contract Details
+---
 
-```
-Core Program ID   : 8Voz2Petb9Q4xYMCqjNVXSyTzkmzMsK3cTrSVGGLF8Ug
-Vault Program ID  : 4jJrbTHiAP5ocWhbUqJG6m1bQ6cRkNi7vJvHWpRABwBm
-Network           : Solana Devnet
-Framework         : Anchor
-```
+## Screenshots
+
+<table>
+  <tr>
+    <td align="center"><b>Health Monitor — AI Chat</b></td>
+    <td align="center"><b>Prescription Scan</b></td>
+  </tr>
+  <tr>
+    <td><img src="public/monitor.png" alt="Monitor" width="100%"/></td>
+    <td><img src="public/scan.png" alt="Scan" width="100%"/></td>
+  </tr>
+  <tr>
+    <td align="center" colspan="2"><b>Health Analysis & Vault</b></td>
+  </tr>
+  <tr>
+    <td colspan="2"><img src="public/analysis.png" alt="Analysis" width="100%"/></td>
+  </tr>
+</table>
 
 ---
 
 ## System Architecture
 
-> **[CipherVault Deep Dive]**
-> An institutional-grade architecture ensuring secure on-chain trade execution, encrypted order books via FHE, and secure, cross-chain multi-asset management powered by dWallets.
-
-<div align="center">
-  <img src="assets/architecture.png" alt="CipherVault Platform Architecture" style="width:100%; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.5); margin: 20px 0;" />
-</div>
-
-<br/>
-
-### Data Flow & Component Interaction
+SoverMind operates entirely on your machine. The frontend UI communicates with a local backend that directly orchestrates Tether's QVAC SDK for AI inference. No health data ever leaves your device.
 
 ```mermaid
 graph TD
-    classDef frontend fill:#1E293B,stroke:#818CF8,stroke-width:2px,color:#F8FAFC,font-family:Inter
-    classDef onchain fill:#1E293B,stroke:#14F195,stroke-width:2px,color:#F8FAFC,font-family:Inter
-    classDef conf fill:#1E293B,stroke:#9945FF,stroke-width:2px,color:#F8FAFC,font-family:Inter
-    classDef ext fill:#1E293B,stroke:#F59E0B,stroke-width:2px,color:#F8FAFC,font-family:Inter
+    classDef frontend fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+    classDef backend fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
+    classDef qvac fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
+    classDef vault fill:#f59e0b,stroke:#d97706,stroke-width:2px,color:#fff
+    classDef blockchain fill:#14b8a6,stroke:#0d9488,stroke-width:2px,color:#fff
 
-    subgraph BROWSER ["🌐 Browser Environment & Dashboard"]
+    subgraph UserMachine ["💻 USER'S LOCAL MACHINE (0 Bytes sent to cloud)"]
         direction TB
-        UI["Next.js 15 + Tailwind UI"]:::frontend
-        STORE["Zustand Global State"]:::frontend
-        SDK["@ciphervault/sdk (Web3 RPC)"]:::frontend
+        UI["🎨 Frontend (React + Vite)<br/>Port 5173"]:::frontend
+        
+        subgraph BackendStack ["⚙️ Backend (Fastify + QVAC SDK) Port 3001"]
+            API["REST API & WebSockets"]:::backend
+            
+            subgraph QVAC ["🧠 QVAC On-Device Models"]
+                direction LR
+                LLM["Llama.cpp<br/>(LLM Chat)"]:::qvac
+                Whisper["Whisper.cpp<br/>(Voice)"]:::qvac
+                ONNX["ONNX<br/>(OCR)"]:::qvac
+                NMT["NMT.cpp<br/>(Translation)"]:::qvac
+            end
+            
+            Vault["🔒 Encrypted Vault<br/>(~/.sovermind/)"]:::vault
+            
+            API <--> QVAC
+            API <--> Vault
+        end
+        
+        UI <-->|"HTTP / WS"| API
     end
-
-    subgraph SOLANA ["⚡ Solana Settlement Layer (Devnet)"]
-        direction TB
-        CORE["CipherVault Core Program\n(Order matching & Settlement)"]:::onchain
-        VAULT["Collateral Vault Program\n(Risk Engine & Position Tracking)"]:::onchain
-        PDAS["Protocol PDAs & State"]:::onchain
-    end
-
-    subgraph CONFIDENTIAL ["🔒 Confidential Compute Layer"]
-        direction TB
-        IKA["Ika dWallet Network\n(MPC Custody)"]:::conf
-        ENC["Encrypt FHE Protocol\n(Order Encryption)"]:::conf
-    end
-
-    subgraph EXTERNAL ["🌍 External Data & Chains"]
-        direction LR
-        PYTH["Pyth Oracle Feeds\n(Real-time Pricing)"]:::ext
-        XC["Foreign Chains\n(Bitcoin, Ethereum, RWAs)"]:::ext
-    end
-
-    UI <--> |"User Actions & Updates"| STORE
-    STORE <--> |"Invoke Transactions"| SDK
-    SDK --> |"Setup MPC Keys"| IKA
-    SDK --> |"FHE Ciphertexts"| ENC
-    SDK --> |"Build Instructions"| CORE
-    SDK --> |"Register Assets"| VAULT
     
-    CORE --> |"Mutate State"| PDAS
-    VAULT --> |"Track Margins"| PDAS
-    CORE --> |"Verify Collateralization"| VAULT
-    VAULT --> |"Fetch USD Price"| PYTH
-    IKA --> |"Verify Foreign TXs"| VAULT
-    ENC --> |"Encrypted Match"| CORE
-    XC --> |"Native Custody"| IKA
+    Solana["⛓️ Solana Devnet<br/>(Optional micro-payments for Premium Reports)"]:::blockchain
+    UI -.->|"Tether WDK"| Solana
 ```
 
 ---
 
-## Smart Contract Details
+## Pipeline Architecture
 
-CipherVault operates on Solana via highly optimized Anchor programs utilizing fixed-size state accounts and PDA-based authority structures to ensure maximum security.
+SoverMind uses four QVAC capabilities in a single end-to-end pipeline. Every step runs locally. The byte counter in the header is hardcoded to `0` because no network calls are ever made.
 
-### 1. CipherVault Core (`8Voz2Petb9Q4xYMCqjNVXSyTzkmzMsK3cTrSVGGLF8Ug`)
-The Core Protocol acts as the matching engine and central settlement hub, operating exclusively on FHE ciphertexts to preserve trade secrecy.
+### 🎙️ Voice & Multilingual Chat
+```mermaid
+graph LR
+    classDef input fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+    classDef model fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
+    classDef output fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
 
-*   **`EncryptedOrder`**: Represents a user's limit/market order. Order size and price are obfuscated via Encrypt's FHE cluster public key.
-*   **`place_order`**: Deposits an encrypted payload to the order book. Only the decentralized matching nodes can compute homomorphic equality and price overlap.
-*   **`settle_trade`**: Called by crankers post-threshold-decryption. Instantiates a `TradeSettlement` entry containing the actual matched sizes and executed prices.
+    V[Voice Input]:::input -->|"@qvac/transcription-whispercpp"| W[Whisper.cpp]:::model
+    W -->|"@qvac/llm-llamacpp"| L[Llama.cpp]:::model
+    L -->|"@qvac/translation-nmtcpp"| T[NMT.cpp]:::model
+    T -->|"Displayed to user"| O[Translated Output]:::output
+```
 
-### 2. Collateral Vault Program (`4jJrbTHiAP5ocWhbUqJG6m1bQ6cRkNi7vJvHWpRABwBm`)
-This program enforces LTV constraints and tracks up to 8 distinct dWallet-backed cross-chain positions per user within a single PDA.
+### 📄 Prescription OCR & Vault
+```mermaid
+graph LR
+    classDef input fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+    classDef model fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
+    classDef output fill:#f59e0b,stroke:#d97706,stroke-width:2px,color:#fff
 
-*   **`VaultAccount`**: Manages the user's aggregate health factor (`total_collateral_usd` vs `used_credit_usd`). Adheres to a `liquidation_threshold_bps` (max 90%).
-*   **`register_dwallet`**: Seamlessly pairs an off-chain Ika MPC address with an on-chain tracker for assets spanning Bitcoin native, Ethereum, Solana, and tokenized real-world assets (RWAs).
-*   **`record_deposit` / `record_withdrawal`**: Strict oracle-gated instructions that intake deposit assertions from the relayer network and re-evaluate total collateral power using Pyth Network feeds.
+    I[Image Upload]:::input -->|"@qvac/ocr-onnx"| O[ONNX OCR]:::model
+    O -->|"@qvac/llm-llamacpp"| L[Llama.cpp Entities]:::model
+    L -->|"AES-256 Encrypted"| V[Local Vault]:::output
+```
 
 ---
 
@@ -146,12 +148,12 @@ This program enforces LTV constraints and tracks up to 8 distinct dWallet-backed
 
 | Feature | Description |
 |:---|:---|
-| **Confidential Trading** | Encrypts order sizes and pricing data using Fully Homomorphic Encryption (FHE) |
-| **Cross-chain Custody** | Decentralized, non-custodial asset management via Ika dWallet MPC networks |
-| **On-chain Settlement** | Deterministic trade execution and collateral accounting on Solana |
-| **Dynamic LTV Engine** | Real-time vault health tracking powered by Pyth Network oracle price feeds |
-| **Zustand Architecture** | Robust frontend state management coupled with a unified transaction engine |
-| **Institutional UX** | Premium, responsive dashboard built with Next.js 15 and modern TailwindCSS |
+| **AI Health Chat** | Ask health questions — Llama.cpp answers locally, streaming token by token |
+| **Voice Input** | Speak your query in any language, transcribed on-device via Whisper.cpp |
+| **Prescription OCR** | Photograph a prescription — medicines extracted and explained using ONNX |
+| **Multilingual Output** | Responses translated to Tamil, Hindi, Swahili offline using NMT.cpp |
+| **Encrypted Vault** | Entries encrypted with AES-256-GCM using a key derived from your machine ID |
+| **Premium Reports** | Optional Solana Devnet flow (Tether WDK) to pay 0.50 USDT for signed PDF reports |
 
 ---
 
@@ -159,97 +161,105 @@ This program enforces LTV constraints and tracks up to 8 distinct dWallet-backed
 
 | Layer | Technology | Function |
 |:---|:---|:---|
-| **Frontend** | Next.js 15 | React framework for dashboard UI and routing |
-| **Styling** | Tailwind CSS | Utility-first CSS for institutional-grade design |
-| **State** | Zustand | Global state management and transaction tracking |
-| **Solana SDK** | `@solana/web3.js` | RPC interactions, Tx building, wallet adapter |
-| **Confidential** | Ika & Encrypt SDKs | Threshold MPC custody and FHE payload generation |
-| **Smart Contracts** | Anchor (Rust) | Solana program logic (`ciphervault-core`, `collateral-vault`) |
-| **Oracles** | Pyth Network | Real-time cryptocurrency price data feeds |
-| **Hosting** | Vercel | Edge-optimized deployment for the web interface |
+| **Frontend** | React 18 (Vite) | High-performance VDOM rendering |
+| **Styling** | Tailwind CSS | Modern layout and aesthetics |
+| **Backend** | Fastify v4 (Node.js) | High-performance API and WebSockets |
+| **AI Core** | Tether QVAC SDK | Local orchestration of Llama, Whisper, ONNX, NMT |
+| **State** | Zustand | Global application state management |
+| **Web3** | Solana / Anchor | Optional micro-payments and signed hash storage |
+| **Web3 SDK** | Tether WDK | Non-custodial Solana wallet connections |
 
 ---
 
 ## Quick Start
 
 ### Prerequisites
-- [Node.js](https://nodejs.org/) v18+
-- [Solana CLI](https://docs.solana.com/cli/install-solana-cli-tools) & [Anchor](https://www.anchor-lang.com/docs/installation)
-- Phantom Wallet (browser extension)
+- [Node.js](https://nodejs.org/) v20+
+- A GPU with Vulkan support
 
-### 1. Clone & Install
+### 1. Clone & Download Models
 ```bash
-git clone https://github.com/Gokul-social/CipherVault.git
-cd CipherVault
-npm install
+git clone https://github.com/Gokul-social/Sovermind.git
+cd sovermind
 ```
+Download models to `backend/models/`:
+- `mistral-7b-instruct-v0.3.Q4_K_M.gguf`
+- `ggml-small.bin`
+- `ocr-model.onnx`
+- `models/translation/`
 
 ### 2. Configure Environment
 ```bash
-# Set up Devnet configuration
-solana config set --url devnet
-npm run setup:devnet
+cd backend
+cp .env.example .env
 ```
+Ensure your `LLM_MODEL_PATH`, `WHISPER_MODEL_PATH`, etc., are correctly pointing to the downloaded models in `.env`.
 
-### 3. Start Development Server
+### 3. Start Backend
 ```bash
+npm install
 npm run dev
 ```
 
-### 4. Connect & Test
-1. Open `http://localhost:3000`
-2. Connect your Phantom wallet (ensure it is set to **Devnet**)
-3. Initialize your collateral vault and start managing cross-chain positions!
+### 4. Start Frontend
+```bash
+cd ../frontend
+cp .env.example .env.local
+npm install
+npm run dev
+```
+Open `http://localhost:5173`.
 
 ---
 
-## Workspace Scripts
+## Privacy Guarantees
 
-The workspace provides several utility scripts for streamlined development:
-
-```bash
-# Build the TypeScript SDK package
-npm run build:sdk
-
-# Build the Next.js application for production
-npm run build:app
-
-# Execute Anchor smart contract test suite
-npm run test:anchor
-
-# Execute SDK integration tests
-npm run test:sdk
-```
+| What | Stays local? |
+|---|---|
+| Your health queries | ✅ Yes — LLM runs on-device |
+| Voice recordings | ✅ Yes — Whisper runs on-device |
+| Prescription images | ✅ Yes — OCR runs on-device |
+| Vault entries | ✅ Yes — encrypted on disk |
+| Translation | ✅ Yes — NMT runs on-device |
+| Bytes sent to cloud | ✅ Always 0 |
+| Solana tx (optional) | ⚠️ Report hash only — no health data |
 
 ---
 
 ## Project Structure
 
 ```
-CipherVault/
-├── app/                          # Next.js Frontend Dashboard
+sovermind/
+├── frontend/                   # React + Vite + TypeScript
 │   ├── src/
-│   │   ├── app/                  # Application routes (Pages)
-│   │   ├── components/           # UI Components (Modals, Toasts)
-│   │   └── store/                # Zustand global state
-├── programs/
-│   ├── ciphervault-core/         # Order flow & trade execution contract
-│   └── collateral-vault/         # Vault health & credit accounting contract
-├── sdk/                          # Unified TypeScript Client Libraries
-├── scripts/                      # Deployment & setup utilities
-├── tests/                        # End-to-end integration tests
-├── Anchor.toml                   # Anchor workspace configuration
-└── package.json                  # Workspace dependencies
+│   │   ├── components/         # Layout & Shared UI components
+│   │   ├── pages/              # Monitor, Scan, Vault
+│   │   ├── store/              # Zustand global state
+│   │   ├── hooks/              # useQVAC, useSessionLogger
+│   │   └── lib/                # QVAC SDK client & Solana integration
+│   └── .env.example
+├── backend/                    # Fastify + Node.js
+│   ├── src/
+│   │   ├── routes/             # health, llm, ocr, transcribe, translate
+│   │   ├── services/           # AI services wrapping QVAC modules
+│   │   ├── ws/                 # WebSocket streaming handler
+│   │   └── lib/                # Model loaders and vault crypto
+│   ├── models/                 # QVAC model files directory
+│   └── .env.example
+├── contract/                   # Anchor (Solana) program
+│   ├── programs/sovermind/     # Rust smart contracts
+│   └── scripts/deploy.ts       # Deployment scripts
+└── reference/                  # Design assets and prototypes
 ```
 
 ---
 
 <div align="center">
   <br />
-  <p>Built on <strong>Solana</strong> · Secured by <strong>Ika</strong> & <strong>Encrypt</strong></p>
+  <p>Built for the <strong>Colosseum Frontier Hackathon</strong> · Powered by <strong>Tether QVAC</strong></p>
   <p>
-    <a href="https://ciphervault-ui.vercel.app">Live App</a> · 
-    <a href="https://explorer.solana.com/address/8Voz2Petb9Q4xYMCqjNVXSyTzkmzMsK3cTrSVGGLF8Ug?cluster=devnet">Core Program</a> · 
-    <a href="https://explorer.solana.com/address/4jJrbTHiAP5ocWhbUqJG6m1bQ6cRkNi7vJvHWpRABwBm?cluster=devnet">Vault Program</a>
+    <a href="https://sovermind-app.vercel.app/">Live Demo</a> · 
+    <a href="https://qvac.tether.io">Tether QVAC Docs</a> · 
+    <a href="./LICENSE">MIT License</a>
   </p>
 </div>
