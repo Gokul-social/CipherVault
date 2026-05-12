@@ -60,7 +60,16 @@ Framework         : Anchor
 
 ## System Architecture
 
-Full-stack architecture: Next.js frontend ↔ Ika/Encrypt SDKs ↔ Solana RPC ↔ Anchor Smart Contracts.
+> **[CipherVault Deep Dive]**
+> An institutional-grade architecture ensuring secure on-chain trade execution, encrypted order books via FHE, and secure, cross-chain multi-asset management powered by dWallets.
+
+<div align="center">
+  <img src="assets/architecture.png" alt="CipherVault Platform Architecture" style="width:100%; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.5); margin: 20px 0;" />
+</div>
+
+<br/>
+
+### Data Flow & Component Interaction
 
 ```mermaid
 graph TD
@@ -69,47 +78,67 @@ graph TD
     classDef conf fill:#1E293B,stroke:#9945FF,stroke-width:2px,color:#F8FAFC,font-family:Inter
     classDef ext fill:#1E293B,stroke:#F59E0B,stroke-width:2px,color:#F8FAFC,font-family:Inter
 
-    subgraph BROWSER ["Browser Environment"]
+    subgraph BROWSER ["🌐 Browser Environment & Dashboard"]
         direction TB
-        UI["Next.js 15 + Tailwind"]:::frontend
-        STORE["Zustand + Hooks"]:::frontend
-        SDK["@ciphervault/sdk"]:::frontend
+        UI["Next.js 15 + Tailwind UI"]:::frontend
+        STORE["Zustand Global State"]:::frontend
+        SDK["@ciphervault/sdk (Web3 RPC)"]:::frontend
     end
 
-    subgraph SOLANA ["Solana Devnet Settlement Layer"]
+    subgraph SOLANA ["⚡ Solana Settlement Layer (Devnet)"]
         direction TB
-        CORE["CipherVault Core Program"]:::onchain
-        VAULT["Collateral Vault Program"]:::onchain
-        PDAS["Protocol PDAs"]:::onchain
+        CORE["CipherVault Core Program\n(Order matching & Settlement)"]:::onchain
+        VAULT["Collateral Vault Program\n(Risk Engine & Position Tracking)"]:::onchain
+        PDAS["Protocol PDAs & State"]:::onchain
     end
 
-    subgraph CONFIDENTIAL ["Confidential Compute Layer"]
+    subgraph CONFIDENTIAL ["🔒 Confidential Compute Layer"]
         direction TB
-        IKA["Ika dWallet Network"]:::conf
-        ENC["Encrypt FHE Protocol"]:::conf
+        IKA["Ika dWallet Network\n(MPC Custody)"]:::conf
+        ENC["Encrypt FHE Protocol\n(Order Encryption)"]:::conf
     end
 
-    subgraph EXTERNAL ["External Integrations"]
+    subgraph EXTERNAL ["🌍 External Data & Chains"]
         direction LR
-        PYTH["Pyth Price Feeds"]:::ext
-        XC["Cross-chain Assets (BTC/ETH)"]:::ext
+        PYTH["Pyth Oracle Feeds\n(Real-time Pricing)"]:::ext
+        XC["Foreign Chains\n(Bitcoin, Ethereum, RWAs)"]:::ext
     end
 
-    UI <--> |"State & Events"| STORE
-    STORE <--> |"Invoke Methods"| SDK
-    SDK --> |"Register dWallets"| IKA
-    SDK --> |"Encrypt Trade Data"| ENC
-    SDK --> |"Submit Txs"| CORE
-    SDK --> |"Manage Collateral"| VAULT
+    UI <--> |"User Actions & Updates"| STORE
+    STORE <--> |"Invoke Transactions"| SDK
+    SDK --> |"Setup MPC Keys"| IKA
+    SDK --> |"FHE Ciphertexts"| ENC
+    SDK --> |"Build Instructions"| CORE
+    SDK --> |"Register Assets"| VAULT
     
-    CORE --> |"State Updates"| PDAS
-    VAULT --> |"State Updates"| PDAS
-    CORE --> |"Risk Checks"| VAULT
-    VAULT --> |"Read Oracles"| PYTH
-    IKA --> |"Cross-chain Sync"| VAULT
-    ENC --> |"Ciphertexts"| CORE
-    XC --> |"Custodial Deposits"| IKA
+    CORE --> |"Mutate State"| PDAS
+    VAULT --> |"Track Margins"| PDAS
+    CORE --> |"Verify Collateralization"| VAULT
+    VAULT --> |"Fetch USD Price"| PYTH
+    IKA --> |"Verify Foreign TXs"| VAULT
+    ENC --> |"Encrypted Match"| CORE
+    XC --> |"Native Custody"| IKA
 ```
+
+---
+
+## Smart Contract Details
+
+CipherVault operates on Solana via highly optimized Anchor programs utilizing fixed-size state accounts and PDA-based authority structures to ensure maximum security.
+
+### 1. CipherVault Core (`8Voz2Petb9Q4xYMCqjNVXSyTzkmzMsK3cTrSVGGLF8Ug`)
+The Core Protocol acts as the matching engine and central settlement hub, operating exclusively on FHE ciphertexts to preserve trade secrecy.
+
+*   **`EncryptedOrder`**: Represents a user's limit/market order. Order size and price are obfuscated via Encrypt's FHE cluster public key.
+*   **`place_order`**: Deposits an encrypted payload to the order book. Only the decentralized matching nodes can compute homomorphic equality and price overlap.
+*   **`settle_trade`**: Called by crankers post-threshold-decryption. Instantiates a `TradeSettlement` entry containing the actual matched sizes and executed prices.
+
+### 2. Collateral Vault Program (`4jJrbTHiAP5ocWhbUqJG6m1bQ6cRkNi7vJvHWpRABwBm`)
+This program enforces LTV constraints and tracks up to 8 distinct dWallet-backed cross-chain positions per user within a single PDA.
+
+*   **`VaultAccount`**: Manages the user's aggregate health factor (`total_collateral_usd` vs `used_credit_usd`). Adheres to a `liquidation_threshold_bps` (max 90%).
+*   **`register_dwallet`**: Seamlessly pairs an off-chain Ika MPC address with an on-chain tracker for assets spanning Bitcoin native, Ethereum, Solana, and tokenized real-world assets (RWAs).
+*   **`record_deposit` / `record_withdrawal`**: Strict oracle-gated instructions that intake deposit assertions from the relayer network and re-evaluate total collateral power using Pyth Network feeds.
 
 ---
 
